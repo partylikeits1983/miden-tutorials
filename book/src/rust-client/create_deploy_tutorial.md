@@ -9,7 +9,7 @@ In this tutorial we will create a miden account for *Alice* and then deploy a fu
 * Understanding the difference between public vs. private accounts & notes
 * Instantiating the Miden client
 * Creating new accounts (public or private)
-* Deploying a faucet
+* Deploying a faucet to fund an account
 
 
 ## Prerequisites
