@@ -2,14 +2,18 @@
 
 *Using the Miden client in Rust to create accounts and deploy faucets*
 
-In this tutorial, we're going to explore how to get started with the Polygon Miden client in Rust, walking through creating accounts and deploying faucets. 
+## Overview
+In this tutorial we will create a miden account for *Alice* and then deploy a fungible faucet. In the next section we will mint tokens from the faucet to fund her account, and then send the tokens from Alice's account to other Miden accounts.
 
 ## What we'll cover
 * Understanding the difference between public vs. private accounts & notes
 * Instantiating the Miden client
 * Creating new accounts (public or private)
 * Deploying a faucet
-* Funding an account
+
+
+## Prerequisites
+To begin, make sure you have a miden-node running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
 
 ## Public vs. private accounts & notes
 Before we dive into the coding side of things, let's clarify the concepts of public vs. private notes and accounts on Miden:
@@ -23,13 +27,6 @@ Note: *The term "account" can be used interchangably with the term "smart contra
 
 *It is useful to think of notes on Miden as "cryptographic cashier's checks" that allow users to send tokens. If the note is private, the note transfer is only known to the sender and receiver.*
 
-## Overview
-
-In this tutorial we will create a miden account for *Alice* and then deploy a fungible faucet. In the next section we will mint tokens from the faucet to fund her account, and then send the tokens from Alice's account to other Miden accounts.
-
-## Prerequisites
-
-To begin, make sure you have a miden-node running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
 
 ## Step 1: Initialize your repository
 Create a new rust repository for your Miden project and navigate to it using this command:
@@ -56,11 +53,11 @@ rand_chacha = "0.3.1"
 ## Step 2: Initialize the client
 Before we can interact with the Miden network, we need to instantiate the client. In this step, we specify several parameters:
 
-* RPC endpoint - The URL of the Miden node to which we connect.
-* SQLite file – A database file (store.sqlite3) used by the client to store account and note data.
-* Client RNG - The random number generator used by the client, ensuring that newly created notes are unique.
-* Authenticator RNG - The random number generator used by the authenticator (details may require confirmation from Dominik).
-* Transaction Prover - The URL for delegated proving, useful when using a resource-constrained environment (e.g., a cellphone) that cannot handle local proving efficiently.
+* **RPC endpoint** - The URL of the Miden node to which we connect.
+* **SQLite file** – A database file (store.sqlite3) used by the client to store account and note data.
+* **Client RNG** - The random number generator used by the client, ensuring that the serial number of newly created notes are unique.
+* **Authenticator RNG** - The random number generator used by the transaction authenticator.
+* **Transaction Prover** - The URL for delegated proving, useful when using a resource-constrained environment (e.g., a cellphone) that cannot handle local proving efficiently.
 
 Copy and paste the following code into your `/src/main.rs` file. 
 ```rust
@@ -186,7 +183,6 @@ println!("Faucet account id: {}", faucet_account.id());
 
 
 ## Summary
-
 Our new `main()` function in the `src/main.rs` file should look something like this:
 
 ```rust
@@ -239,10 +235,8 @@ In this section we explained how to instantiate the Miden client, create a walle
 
 In the next section we will cover how to mint tokens from the faucet, consume notes, and send tokens to other accounts. 
 
-
-
 ### Running the Example
-To run a full working example navigate to the `rust-client` directory in the miden-tutorials repository and run this command:
+To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 ```bash
 cd rust-client
 cargo run --release --bin create_mint_consume_send
