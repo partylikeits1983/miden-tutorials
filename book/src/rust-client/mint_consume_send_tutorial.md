@@ -185,7 +185,7 @@ let transaction_request = TransactionRequest::pay_to_id(
     payment_transaction,
     None,             // recall_height: None
     NoteType::Public, // note type is public
-    client.rng(),     // rng
+    client.rng(),     // rng for the note serial number
 )
 .unwrap();
 
