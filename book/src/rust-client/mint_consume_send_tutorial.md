@@ -26,7 +26,7 @@ for _ in 0..5 {
         fungible_asset.clone(), // fungible asset id
         alice_account.id(),     // target account id
         NoteType::Public,       // minted note type
-        client.rng(),           // rng
+        client.rng(),           // rng for the note serial number
     )
     .unwrap();
 
@@ -426,7 +426,7 @@ async fn main() -> Result<(), ClientError> {
         payment_transaction,
         None,             // recall_height
         NoteType::Public, // note type
-        client.rng(),     // rng
+        client.rng(),     // rng for the note serial number
     )?;
     let tx_execution_result = client
         .new_transaction(alice_account.id(), transaction_request)
