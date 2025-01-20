@@ -1,19 +1,22 @@
 # Mint, Consume, and Send Assets
 
-*Using the Miden Client in Rust to Mint, Consume, and Send Assets*
+*Using the Miden client in Rust to mint, consume, and send assets*
 
 ## Overview
 
 In the previous section we initialized our repository and covered how to create an account and deploy a faucet. In this section we will mint tokens from the faucet for *Alice*, consume these created notes, and then show how to send assets to other accounts.
 
-## What We'll Cover
+## What we'll cover
 * Minting tokens from a faucet
 * Consuming notes
 * Sending tokens to other users
 
-## Step 1: Minting Tokens from the Faucet
-To mint notes with tokens from the faucet we created, Alice needs to call the faucet with a mint transaction request.
+## Step 1: Minting tokens from the faucet
+To mint notes with tokens from the faucet we created, Alice needs to call the faucet with a mint transaction request. 
 
+*In essence, a transaction request is a structured template that outlines the data required to generate a zero-knowledge proof of a state change of an account. It specifies which input notes (if any) will be consumed, includes an optional transaction script to execute, and enumerates the set of notes expected to be created (if any).*
+
+Here is an example of a transaction request minting tokens from the faucet for Alice:
 ```rust
 let amount: i32 = 100;
 let fungible_asset = FungibleAsset::new(faucet_account.id(), amount)
@@ -35,8 +38,13 @@ let tx_execution_result = client
 client.submit_transaction(tx_execution_result).await?;
 ```
 
-## Step 2: Identifying Consumable Notes
-Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction. To identify notes that are ready to consume, the miden-client has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function. 
+## Step 2: Identifying consumable notes
+Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction. 
+
+Minting a note from a faucet on Miden means a faucet account creates a new note targeted to the requesting account. The requesting account needs to consume this new note to have the assets appear in their account.
+
+
+To identify notes that are ready to consume, the Miden client has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function. 
 
 *Tip: If you know how many notes to expect after a transaction, use an await or loop condition to check how many notes of the type you expect are available for consumption instead of using a set timeout before calling `get_consumable_notes`. This ensures your application isn't idle for longer than necessary.*
 
@@ -58,7 +66,7 @@ let tx_execution_result = client
 client.submit_transaction(tx_execution_result).await?;
 ```
 
-## Step 4: Sending Tokens to Other Accounts
+## Step 4: Sending tokens to other accounts
 Now that Alice has tokens in her wallet, she wants to send some tokens to some of her friends. She has two options. She can create a separate transaction for each transfer to each friend, or she can batch the transfer in a single transaction. 
 
 The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height. 
@@ -104,10 +112,6 @@ client.submit_transaction(tx_execution_result).await?;
 ## Summary
 Our `src/main.rs` function should now look something like this:
 ```rust
-use figment::{
-    providers::{Format, Toml},
-    Figment,
-};
 use miden_client::{
     accounts::{AccountId, AccountStorageMode, AccountTemplate, AccountType},
     assets::{FungibleAsset, TokenSymbol},
@@ -128,40 +132,16 @@ use miden_client::{
 use miden_lib::notes::create_p2id_note;
 use miden_objects::accounts::get_account_seed;
 use rand::Rng;
-use serde::Deserialize;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 use tokio::time::Duration;
 
-/// Name of your local TOML file containing client config.
-/// Adjust this if you store it in another place/name.
-const CLIENT_CONFIG_FILE_NAME: &str = "miden-client.toml";
-
-/// Simple container for everything in your TOML file (RPC + store configs, etc.)
-#[derive(Debug, Deserialize)]
-pub struct ClientConfig {
-    /// Describes settings related to the RPC endpoint
-    pub rpc: RpcConfig,
-    /// Describes settings related to the store.
-    pub store: SqliteStoreConfig,
-}
-
-impl ClientConfig {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
-        let figment = Figment::from(Toml::file(path));
-        figment.extract().unwrap_or_else(|e| {
-            panic!("Failed to load client config: {}", e);
-        })
-    }
-}
-
-/// This function initializes the `Client` using the parameters
-/// from `miden-client.toml`. It loads the store, seeds the RNG,
-/// sets up the authenticator, local prover, and returns a `Client`.
 pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    let client_config = ClientConfig::from_file(CLIENT_CONFIG_FILE_NAME);
+    // Default values for store and rpc config
+    let store_config = SqliteStoreConfig::default();
+    let rpc_config = RpcConfig::default();
 
     // Create an SQLite store
-    let store = SqliteStore::new(&client_config.store)
+    let store = SqliteStore::new(&store_config)
         .await
         .map_err(ClientError::StoreError)?;
     let arc_store = Arc::new(store);
@@ -179,7 +159,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     let tx_prover = LocalTransactionProver::new(ProvingOptions::default());
 
     // Build the RPC client
-    let rpc_client = Box::new(TonicRpcClient::new(&client_config.rpc));
+    let rpc_client = Box::new(TonicRpcClient::new(&rpc_config));
 
     // Finally create the client
     let client = Client::new(
@@ -273,7 +253,7 @@ async fn main() -> Result<(), ClientError> {
 
     // Wait until there are exactly 5 consumable notes for Alice
     loop {
-        // Re-sync state to ensure we have the latest info
+        // Re-sync state to ensure we have the latest data
         client.sync_state().await?;
 
         // Fetch all consumable notes for Alice

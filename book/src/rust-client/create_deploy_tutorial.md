@@ -1,34 +1,37 @@
 # Creating Accounts and Faucets 
 
-*Using the Miden Client in Rust to Create Accounts and Deploy Faucets*
+*Using the Miden client in Rust to create accounts and deploy faucets*
 
-In this tutorial, we're going to explore how to get started with the Polygon Miden client in Rust, walking through creating accounts and deploying faucets.
+In this tutorial, we're going to explore how to get started with the Polygon Miden client in Rust, walking through creating accounts and deploying faucets. 
 
-## What We'll Cover
+## What we'll cover
 * Understanding the difference between public vs. private accounts & notes
-* Instantiating the miden-client
+* Instantiating the Miden client
 * Creating new accounts (public or private)
 * Deploying a faucet
+* Funding an account
 
-## Public vs. Private Accounts & Notes
-Before we dive into the coding side of things, let's clarify the concepts of public vs. private Notes and Accounts on Miden:
+## Public vs. private accounts & notes
+Before we dive into the coding side of things, let's clarify the concepts of public vs. private notes and accounts on Miden:
 
-* Public Accounts: The account's data and code are stored on-chain and are openly visible, including its assets.
-* Private Accounts: The account's state and logic are off-chain, only known to its owner.
-* Public Notes: The note's state is visible to anyone - perfect for scenarios where transparency is desired.
-* Private Notes: The note's state is stored off-chain, you will need to share the note data with the relevant parties (via email or Telegram) for them to be able to consume.
+* Public accounts: The account's data and code are stored on-chain and are openly visible, including its assets.
+* Private accounts: The account's state and logic are off-chain, only known to its owner.
+* Public notes: The note's state is visible to anyone - perfect for scenarios where transparency is desired.
+* Private notes: The note's state is stored off-chain, you will need to share the note data with the relevant parties (via email or Telegram) for them to be able to consume.
+
+Note: *The term "account" can be used interchangably with the term "smart contract" since account abstraction on Miden is handled natively.*
 
 *It is useful to think of notes on Miden as "cryptographic cashier's checks" that allow users to send tokens. If the note is private, the note transfer is only known to the sender and receiver.*
 
 ## Overview
 
-In this tutorial we will create a miden account for *Alice* and then deploy a fungible faucet. In the next section we will mint tokens from the faucet, and then send the tokens from Alice's account to other Miden accounts.
+In this tutorial we will create a miden account for *Alice* and then deploy a fungible faucet. In the next section we will mint tokens from the faucet to fund her account, and then send the tokens from Alice's account to other Miden accounts.
 
 ## Prerequisites
 
-To begin, make sure you have a miden-node running locally in a separate terminal window. To get the miden-node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
+To begin, make sure you have a miden-node running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
 
-## Step 1: Initializing Your Repository
+## Step 1: Initialize your repository
 Create a new rust repository for your Miden project and navigate to it using this command:
 ```bash
 cargo new miden-rust-client
@@ -50,31 +53,17 @@ figment = { version = "0.10", features = ["toml", "env"] }
 rand_chacha = "0.3.1"
 ```
 
-## Step 2: Initialize the Client
-Before we can interact with the Miden network, we need to instantiate the client. To do so, we need to create a `miden-client.toml` file at the root of our miden-rust-client repository.
+## Step 2: Initialize the client
+Before we can interact with the Miden network, we need to instantiate the client. In this step, we specify several parameters:
 
-```toml
-[rpc]
-timeout_ms = 10000
+* RPC endpoint - The URL of the Miden node to which we connect.
+* SQLite file – A database file (store.sqlite3) used by the client to store account and note data.
+* Client RNG - The random number generator used by the client, ensuring that newly created notes are unique.
+* Authenticator RNG - The random number generator used by the authenticator (details may require confirmation from Dominik).
+* Transaction Prover - The URL for delegated proving, useful when using a resource-constrained environment (e.g., a cellphone) that cannot handle local proving efficiently.
 
-[rpc.endpoint]
-protocol = "http"
-host = "localhost"        # localhost
-# host = "18.203.155.106" # testnet
-port = 57291
-
-[store]
-database_filepath = "store.sqlite3"
-```
-
-Next, we need to modify our `src/main.rs` file.
-
-Copy and paste the following code snippet into your `/src/main.rs` file. 
+Copy and paste the following code into your `/src/main.rs` file. 
 ```rust
-use figment::{
-    providers::{Format, Toml},
-    Figment,
-};
 use miden_client::{
     accounts::{AccountStorageMode,AccountTemplate},
     assets::TokenSymbol,
@@ -89,39 +78,16 @@ use miden_client::{
     Client, ClientError, Felt,
 };
 use rand::Rng;
-use serde::Deserialize;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
-/// Name of your local TOML file containing client config.
-/// Adjust this if you store it in another place/name.
-const CLIENT_CONFIG_FILE_NAME: &str = "miden-client.toml";
-
-/// Simple container for everything in your TOML file (RPC + store configs, etc.)
-#[derive(Debug, Deserialize)]
-pub struct ClientConfig {
-    /// Describes settings related to the RPC endpoint
-    pub rpc: RpcConfig,
-    /// Describes settings related to the store.
-    pub store: SqliteStoreConfig,
-}
-
-impl ClientConfig {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
-        let figment = Figment::from(Toml::file(path));
-        figment.extract().unwrap_or_else(|e| {
-            panic!("Failed to load client config: {}", e);
-        })
-    }
-}
-
-/// This function initializes the `Client` using the parameters
-/// from `miden-client.toml`. It loads the store, seeds the RNG,
-/// sets up the authenticator, local prover, and returns a `Client`.
 pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    let client_config = ClientConfig::from_file(CLIENT_CONFIG_FILE_NAME);
+
+    // Default values for store and rpc config
+    let store_config = SqliteStoreConfig::default();
+    let rpc_config = RpcConfig::default();
 
     // Create an SQLite store
-    let store = SqliteStore::new(&client_config.store)
+    let store = SqliteStore::new(&store_config)
         .await
         .map_err(ClientError::StoreError)?;
     let arc_store = Arc::new(store);
@@ -139,9 +105,9 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     let tx_prover = LocalTransactionProver::new(ProvingOptions::default());
 
     // Build the RPC client
-    let rpc_client = Box::new(TonicRpcClient::new(&client_config.rpc));
+    let rpc_client = Box::new(TonicRpcClient::new(&rpc_config));
 
-    // Finally create the client
+    // Finally, create the client
     let client = Client::new(
         rpc_client,
         rng_for_client,
@@ -167,21 +133,24 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
-Now, lets run our `src/main.rs` file to initialize the miden-client:
+In this step, we will initialize a Miden client capable of syncing with the blockchain (in this case, our local node). To do so, run the `src/main.rs` file:
 ```bash
 cargo run --release 
 ```
 
-After running this file, you should see the latest block number printed to the terminal:
+After the program executes, you should see the latest block number printed to the terminal, for example:
 ```
-Current block number: 607436
+Latest block number: 3855 
 ```
 
-## Step 3: Creating a Wallet
+## Step 3: Creating a wallet
 Now that we've initialized the client, we can now create a wallet for Alice. 
 
-To create a wallet for Alice using the miden client, we specify the account type by specifying if the account code is mutable or immutable and whether the account is public or private. In the examples below we create a mutable public account for Alice.
+To create a wallet for Alice using the Miden client, we specify the account type by specifying if the account code is mutable or immutable and whether the account is public or private. A wallet on Miden is simply an account with standardized code.
 
+In the example below we create a mutable public account for Alice. 
+
+Add this snippet to the end of your file in the `main()` function:
 ```rust
 let alice_template = AccountTemplate::BasicWallet {
     mutable_code: true,
@@ -189,12 +158,17 @@ let alice_template = AccountTemplate::BasicWallet {
 };
 
 let (alice_account, _alice_seed) = client.new_account(alice_template).await?;
+
+println!("Alice's account id: {}", alice_account.id());
 ```
 
 
-## Step 4: Deploying a Fungible Faucet
-For Alice to have testnet assets, we need to first deploy a faucet. A faucet account on Miden, mints fungible tokens. We'll create a public faucet with a token symbol, decimals, and a max supply. We will use this faucet to mint tokens to Alice's account. 
+## Step 4: Deploying a fungible faucet
+For Alice to have testnet assets, we need to first deploy a faucet. A faucet account on Miden mints fungible tokens.
 
+We'll create a public faucet with a token symbol, decimals, and a max supply. We will use this faucet to mint tokens to Alice's account in the next section.
+
+Add this snippet to the end of your file in the `main()` function:
 ```rust
 let faucet_template = AccountTemplate::FungibleFaucet {
     token_symbol: TokenSymbol::new("MID").unwrap(),
@@ -204,6 +178,8 @@ let faucet_template = AccountTemplate::FungibleFaucet {
 };
 
 let (faucet_account, _faucet_seed) = client.new_account(faucet_template).await?;
+
+println!("Faucet account id: {}", faucet_account.id());
 ```
 
 *When tokens are minted from this faucet, each token batch is represented as a "note" (UTXO). You can think of a Miden Note as a cryptographic cashier's check that has certain spend conditions attached to it.*
@@ -259,7 +235,10 @@ Alice's account id: 0x1a8eefbcfef43f48
 Faucet account id: 0x2d7969e6125856d0
 ```
 
-In this section we explained how to instantiate the miden-client, create a wallet account, and deploy a faucet. In the next section we will cover how to mint tokens from the faucet, consume notes, and send tokens to other accounts. 
+In this section we explained how to instantiate the Miden client, create a wallet account, and deploy a faucet. 
+
+In the next section we will cover how to mint tokens from the faucet, consume notes, and send tokens to other accounts. 
+
 
 
 ### Running the Example
