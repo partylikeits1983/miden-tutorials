@@ -56,7 +56,7 @@ Before we can interact with the Miden network, we need to instantiate the client
 * **RPC endpoint** - The URL of the Miden node to which we connect.
 * **SQLite file** – A database file (store.sqlite3) used by the client to store account and note data.
 * **Client RNG** - The random number generator used by the client, ensuring that the serial number of newly created notes are unique.
-* **Authenticator RNG** - The random number generator used by the transaction authenticator.
+* **Authenticator RNG** - The random number generator used by the transaction authenticator during signature generation for the Miden VM.
 * **Transaction Prover** - The URL for delegated proving, useful when using a resource-constrained environment (e.g., a cellphone) that cannot handle local proving efficiently.
 
 Copy and paste the following code into your `/src/main.rs` file. 
