@@ -3,33 +3,33 @@
 *Using the Miden client in Rust to create accounts and deploy faucets*
 
 ## Overview
-In this tutorial we will create a miden account for *Alice* and then deploy a fungible faucet. In the next section we will mint tokens from the faucet to fund her account, and then send the tokens from Alice's account to other Miden accounts.
+In this tutorial, we will create a Miden account for *Alice* and deploy a fungible faucet. In the next section, we will mint tokens from the faucet to fund her account and transfer tokens from Alice's account to other Miden accounts.
 
 ## What we'll cover
-* Understanding the difference between public vs. private accounts & notes
+* Understanding the differences between public and private accounts & notes
 * Instantiating the Miden client
 * Creating new accounts (public or private)
 * Deploying a faucet to fund an account
 
 
 ## Prerequisites
-To begin, make sure you have a miden-node running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
+Before you begin, ensure that a Miden node is running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](./miden_node_setup_tutorial.md) page.
 
 ## Public vs. private accounts & notes
-Before we dive into the coding side of things, let's clarify the concepts of public vs. private notes and accounts on Miden:
+Before diving into coding, let's clarify the concepts of public and private accounts & notes on Miden:
 
 * Public accounts: The account's data and code are stored on-chain and are openly visible, including its assets.
 * Private accounts: The account's state and logic are off-chain, only known to its owner.
 * Public notes: The note's state is visible to anyone - perfect for scenarios where transparency is desired.
-* Private notes: The note's state is stored off-chain, you will need to share the note data with the relevant parties (via email or Telegram) for them to be able to consume.
+* Private notes: The note's state is stored off-chain, you will need to share the note data with the relevant parties (via email or Telegram) for them to be able to consume the note.
 
-Note: *The term "account" can be used interchangably with the term "smart contract" since account abstraction on Miden is handled natively.*
+Note: *The term "account" can be used interchangeably with the term "smart contract" since account abstraction on Miden is handled natively.*
 
 *It is useful to think of notes on Miden as "cryptographic cashier's checks" that allow users to send tokens. If the note is private, the note transfer is only known to the sender and receiver.*
 
 
 ## Step 1: Initialize your repository
-Create a new rust repository for your Miden project and navigate to it using this command:
+CCreate a new Rust repository for your Miden project and navigate to it with the following command:
 ```bash
 cargo new miden-rust-client
 cd miden-rust-client 
@@ -51,7 +51,7 @@ rand_chacha = "0.3.1"
 ```
 
 ## Step 2: Initialize the client
-Before we can interact with the Miden network, we need to instantiate the client. In this step, we specify several parameters:
+Before interacting with the Miden network, we must instantiate the client. In this step, we specify several parameters:
 
 * **RPC endpoint** - The URL of the Miden node to which we connect.
 * **SQLite file** – A database file (store.sqlite3) used by the client to store account and note data.
@@ -59,7 +59,7 @@ Before we can interact with the Miden network, we need to instantiate the client
 * **Authenticator RNG** - The random number generator used by the transaction authenticator during signature generation for the Miden VM.
 * **Transaction Prover** - The URL for delegated proving, useful when using a resource-constrained environment (e.g., a cellphone) that cannot handle local proving efficiently.
 
-Copy and paste the following code into your `/src/main.rs` file. 
+Copy and paste the following code into your `src/main.rs` file. 
 ```rust
 use miden_client::{
     accounts::{AccountStorageMode,AccountTemplate},
@@ -130,7 +130,7 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
-In this step, we will initialize a Miden client capable of syncing with the blockchain (in this case, our local node). To do so, run the `src/main.rs` file:
+In this step, we will initialize a Miden client capable of syncing with the blockchain (in this case, our local node). Run the following command to execute `src/main.rs`:
 ```bash
 cargo run --release 
 ```
@@ -141,9 +141,9 @@ Latest block number: 3855
 ```
 
 ## Step 3: Creating a wallet
-Now that we've initialized the client, we can now create a wallet for Alice. 
+Now that we've initialized the client, we can create a wallet for Alice.
 
-To create a wallet for Alice using the Miden client, we specify the account type by specifying if the account code is mutable or immutable and whether the account is public or private. A wallet on Miden is simply an account with standardized code.
+To create a wallet for Alice using the Miden client, we define the account type as mutable or immutable and specify whether it is public or private. A mutable wallet means you can change the account code after deployment. A wallet on Miden is simply an account with standardized code.
 
 In the example below we create a mutable public account for Alice. 
 
@@ -161,7 +161,7 @@ println!("Alice's account id: {}", alice_account.id());
 
 
 ## Step 4: Deploying a fungible faucet
-For Alice to have testnet assets, we need to first deploy a faucet. A faucet account on Miden mints fungible tokens.
+To provide Alice with testnet assets, we must first deploy a faucet. A faucet account on Miden mints fungible tokens.
 
 We'll create a public faucet with a token symbol, decimals, and a max supply. We will use this faucet to mint tokens to Alice's account in the next section.
 
@@ -183,7 +183,7 @@ println!("Faucet account id: {}", faucet_account.id());
 
 
 ## Summary
-Our new `main()` function in the `src/main.rs` file should look something like this:
+Your updated `main()` function in `src/main.rs` should look like this:
 
 ```rust
 #[tokio::main]
