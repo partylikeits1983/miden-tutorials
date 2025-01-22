@@ -29,7 +29,7 @@ Note: *The term "account" can be used interchangeably with the term "smart contr
 
 
 ## Step 1: Initialize your repository
-CCreate a new Rust repository for your Miden project and navigate to it with the following command:
+Create a new Rust repository for your Miden project and navigate to it with the following command:
 ```bash
 cargo new miden-rust-client
 cd miden-rust-client 
