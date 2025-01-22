@@ -46,7 +46,6 @@ rand = { version = "0.8" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 tokio = { version = "1.40", features = ["rt-multi-thread", "net", "macros"] }
-figment = { version = "0.10", features = ["toml", "env"] }
 rand_chacha = "0.3.1"
 ```
 
@@ -158,7 +157,6 @@ let (alice_account, _alice_seed) = client.new_account(alice_template).await?;
 
 println!("Alice's account id: {}", alice_account.id());
 ```
-
 
 ## Step 4: Deploying a fungible faucet
 To provide Alice with testnet assets, we must first deploy a faucet. A faucet account on Miden mints fungible tokens.
