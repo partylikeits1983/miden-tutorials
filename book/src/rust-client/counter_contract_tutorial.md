@@ -164,10 +164,12 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
-## Step 2: Create the counter contract
+*When running the code above, there will be some unused imports, however, we will use these imports later on in the tutorial.*
+
+## Step 2: Build the counter contract
 For better code organization, we will separate the Miden Assembly code from our Rust code.
 
-Create a directory named `masm` at the root of your `miden-counter-contract` directory. This will contain our contract and script masm code. 
+Create a directory named `masm` at the **root** of your `miden-counter-contract` directory. This will contain our contract and script masm code. 
 
 Initialize the masm directory:
 ```bash
@@ -248,7 +250,7 @@ end
 To build the counter contract copy and paste the following code into your src/main.rs file:
 ```rs
 // File path
-let file_path = Path::new("../masm/accounts/counter.masm");
+let file_path = Path::new("./masm/accounts/counter.masm");
 
 // Read the file contents
 let account_code = fs::read_to_string(file_path).unwrap();
@@ -305,7 +307,6 @@ for (index, procedure) in procedures_vec.iter().enumerate() {
     println!("Procedure {}: {:?}", index + 1, procedure.to_hex());
 }
 println!("number of procedures: {}", procedures_vec.len());
-
 ```
 
 Run the following command to execute src/main.rs:
@@ -339,7 +340,7 @@ let procedure_2_hash = procedures_vec[0].to_hex();
 let procedure_call = format!("{}", procedure_2_hash);
 
 // 2B) Load a MASM script that will reference our increment procedure.
-let file_path = Path::new("../masm/scripts/counter_script.masm");
+let file_path = Path::new("./masm/scripts/counter_script.masm");
 let original_code = fs::read_to_string(file_path).unwrap();
 
 // 2C) Replace the placeholder `{increment_count}` in the script with the actual procedure call.
@@ -507,12 +508,12 @@ async fn main() -> Result<(), ClientError> {
     println!("Latest block: {}", sync_summary.block_num);
 
     // -------------------------------------------------------------------------
-    // STEP 1: Create a basic counter contract
+    // STEP 1: Build the Counter Contract
     // -------------------------------------------------------------------------
-    println!("\n[STEP 1] Creating Counter Contract.");
+    println!("\n[STEP 1] Build the Counter Contract");
 
     // 1A) Load the MASM file containing an account definition (e.g. a 'counter' contract).
-    let file_path = Path::new("../masm/accounts/counter.masm");
+    let file_path = Path::new("./masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // 1B) Prepare the assembler for compiling contract code (debug mode = true).
@@ -567,7 +568,7 @@ async fn main() -> Result<(), ClientError> {
     let procedure_call = format!("{}", procedure_2_hash);
 
     // 2B) Load a MASM script that will reference our increment procedure.
-    let file_path = Path::new("../masm/scripts/counter_script.masm");
+    let file_path = Path::new("./masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // 2C) Replace the placeholder `{increment_count}` in the script with the actual procedure call.
@@ -608,6 +609,55 @@ async fn main() -> Result<(), ClientError> {
     Ok(())
 }
 ```
+
+The output of our program will look something like this:
+```
+Client initialized successfully.
+Latest block: 622
+counter_contract hash: RpoDigest([9185992507701071673, 6960916831737267302, 1553714328610042343, 12936151506213499503])
+contract id: "0x118c7e3eb1017498"
+Procedure 1: "0x2259e69ba0e49a85f80d5ffc348e25a0386a0bbe7dbb58bc45b3f1493a03c725"
+Procedure 2: "0x6f2eccd43c2cbf47b87c443da93739d2d739b1e14cc42ca55fed8ac9b743e462"
+number of procedures: 2
+
+[STEP 2] Call Counter Contract With Script
+Final script:
+begin
+    # => []
+    call.0x2259e69ba0e49a85f80d5ffc348e25a0386a0bbe7dbb58bc45b3f1493a03c725
+end
+Stack state before step 2804:
+├──  0: 111
+├──  1: 0
+├──  2: 0
+├──  3: 0
+├──  4: 0
+├──  5: 0
+├──  6: 0
+├──  7: 0
+├──  8: 0
+├──  9: 0
+├── 10: 0
+├── 11: 0
+├── 12: 0
+├── 13: 0
+├── 14: 0
+├── 15: 0
+├── 16: 0
+├── 17: 0
+├── 18: 0
+├── 19: 0
+├── 20: 0
+├── 21: 0
+├── 22: 0
+├── 23: 0
+└── 24: 0
+
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0x8dc90ff6db9fac3672175e15d68721d50765cf96d157540dc17a482101e7fdb8
+storage item 0: Ok(RpoDigest([0, 0, 0, 1]))
+```
+
+The line in the output `Stack state before step 2804` ouputs the stack state when we call "debug.stack" in the `counter.masm` file.
 
 ### Running the Example
 To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
