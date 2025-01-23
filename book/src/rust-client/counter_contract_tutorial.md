@@ -184,7 +184,9 @@ masm/
 ```
 
 ### Custom Miden smart contract
-Below is our counter contract. It has a single exported procedure `increment_count`. At the beginning of the MASM file we define our imports. In this case we are importing `miden::account` and `std::sys`.
+Below is our counter contract. It has a single exported procedure `increment_count`.
+
+At the beginning of the MASM file we define our imports. In this case we are importing `miden::account` and `std::sys`. 
 
 The import `miden::account` contains useful procedures for interacting with a smart contract's state. 
 
@@ -232,6 +234,15 @@ export.increment_count
     exec.sys::truncate_stack
 end
 ```
+
+### Concept of function visibility and modifiers in Miden smart contracts
+The function `increment_count` in our Miden smart contract can be equated to an "external" Solidity function without a modifier, since any user can call the function and increment the count of the smart contract. The reason why anyone can call the `increment_count` procedure is because the procedure calls `account::incr_nonce` during its execution.
+
+If the `increment_count` procedure did not call the `account::incr_nonce` procedure during its execution, only the deployer of the counter contract would be able to increment the count of the smart contract.
+
+In essence, if a procedure performs a state change in the Miden smart contract, and does not call `account::incr_nonce` at some point during its execution, this function can be equated to having an `onlyOwner` Solidity modifer, meaning only the user with knowledge of the private key of the account can execute transactions that result in a state change.
+
+**Note**: *Adding the `account::incr_nonce` to a state changing procedure allows any user to call the procedure.*
 
 ### Custom script
 This is a Miden assembly script that will call the `increment_count` procedure during the transaction. 
