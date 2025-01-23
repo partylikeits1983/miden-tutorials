@@ -17,7 +17,7 @@ function App() {
       <p>Open the console to view logs</p>
 
       {!clientStarted && (
-        <button onClick={handleClick}>Start Web Client</button>
+        <button onClick={handleClick}>Start WebClient</button>
       )}
     </div>
   );
