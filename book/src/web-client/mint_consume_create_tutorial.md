@@ -1,16 +1,16 @@
-# Mint, Consume, and Send Assets
-*Using the Miden web client in TypeScript to mint, consume, and send assets*
+# Mint, Consume, and Create Notes
+*Using the Miden WebClient in TypeScript to mint, consume, and create notes*
 
 ## Overview
 In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for *Alice*, consume the newly created notes, and demonstrate how to send assets to other accounts.
 
 ## What we'll cover
-* Minting tokens from a faucet
+* Minting assets from a faucet
 * Consuming notes to fund an account
 * Sending tokens to other users
 
 ## Step 1: Minting tokens from the faucet
-To mint notes with tokens from the faucet we created, Alice can use the web client's `new_mint_transaction()` function.
+To mint notes with tokens from the faucet we created, Alice can use the WebClient's `new_mint_transaction()` function.
 
 Below is an example of a transaction request minting tokens from the faucet for Alice. 
 
@@ -26,8 +26,8 @@ await client.sync_state();
 await client.new_mint_transaction(
   targetId,          // target wallet id
   faucetId,          // faucet id
-  NoteType.public(), // Note Type
-  amount             // use the passed amount
+  NoteType.public(), // note type
+  amount             // amount
 );
 
 await client.sync_state();
@@ -38,12 +38,11 @@ Once Alice has minted a note from the faucet, she will eventually want to spend 
 
 Minting a note from a faucet on Miden means a faucet account creates a new note targeted to the requesting account. The requesting account must consume this note for the assets to appear in their account.
 
-To identify notes that are ready to consume, the Miden web client has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function. 
+To identify notes that are ready to consume, the Miden WebClient has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function. 
 
 *Tip: If you know the expected number of notes after a transaction, use `await` or a loop condition to verify their availability before calling `get_consumable_notes`. This prevents unnecessary application idling.*
 
 #### Identifying which notes are available:
-
 ```ts
 consumable_notes = await client.get_consumable_notes(accountId);
 ```
@@ -79,7 +78,7 @@ In our example, Alice will now send 50 tokens to a different account.
 Now as an example, Alice will send some tokens to an account in a single transaction.
 
 Add this snippet to the end of your file in the `main()` function:
-```Rust
+```ts
 // send single P2ID note
 let dummy_account = "0x134fa8ef08d54f24";
 const receiverAccountId = AccountId.from_hex(dummy_account);

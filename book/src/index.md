@@ -9,5 +9,5 @@ The tutorials repository is separated into four main parts:
 1. **masm** directory – Contains Miden assembly code used in the tutorials.
 2. **node** directory - Contains the necessary config files for running the miden-node locally.
 3. **rust-client** directory – Contains examples of using the Miden Rust client.
-4. **web-client** directory – Contains examples of using the Miden web client in the browser.
+4. **web-client** directory – Contains examples of using the Miden WebClient in the browser.
 

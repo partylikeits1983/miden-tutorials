@@ -1,5 +1,5 @@
-# Mint, Consume, and Send Assets
-*Using the Miden client in Rust to mint, consume, and send assets*
+# Mint, Consume, and Create Notes
+*Using the Miden client in Rust to mint, consume, and create notes*
 
 ## Overview
 In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for *Alice*, consume the newly created notes, and demonstrate how to send assets to other accounts.
