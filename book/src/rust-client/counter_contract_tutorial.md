@@ -7,6 +7,7 @@ In this tutorial, we will build a simple counter smart contract that maintains a
 Using a script, we will invoke the increment function within the counter contract to update the count. This tutorial provides a foundational understanding of developing and deploying custom smart contracts on Miden.
 
 ## What we'll cover
+* Deploying a custom smart contract on Miden
 * Getting up to speed with the basics of Miden assembly
 * Calling procedures in an account
 * Pure vs state changing procedures
