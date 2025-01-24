@@ -665,7 +665,7 @@ The line in the output `Stack state before step 2832` ouputs the stack state whe
 
 To increment the count of the counter contract all you need is to know the account id of the counter and the procedure hash of the `increment_count` procedure. To increment the count without deploying the counter each time, you can modify the program above to hardcode the account id of the counter and the procedure hash of the `increment_count` prodedure in the masm script.
 
-### Running the Example
+### Running the example
 To run the full example, navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 ```bash
 cd rust-client

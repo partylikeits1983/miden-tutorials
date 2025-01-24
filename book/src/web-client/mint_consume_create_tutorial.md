@@ -214,7 +214,7 @@ Sending tokens to dummy account...
 Tokens sent.
 ```
 
-### Resetting the MidenClientDB
+### Resetting the `MidenClientDB`
 The Miden webclient stores account and note data in the browser. To clear the account and node data in the browser, paste this code snippet into the browser console:
 ```javascript
 (async () => {
@@ -227,7 +227,7 @@ The Miden webclient stores account and note data in the browser. To clear the ac
 })();
 ```
 
-### Running the Example
+### Running the example
 To run a full working example navigate to the `web-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run the web application example:
 
 ```bash

@@ -19,7 +19,7 @@ Example `genesis.toml` and `miden-node.toml` files can be found in the **miden-t
 - The `genesis.toml` file defines the **start timestamp** for the `miden-node` testnet and allows you to pre-deploy accounts and funding faucets.  
 - The `miden-node.toml` file configures the **RPC endpoint** and other settings for the `miden-node`.
 
-## Running the Miden Node Locally
+## Running the Miden node locally
 
 ### Step 1: Clone the miden-tutorials repository
 In a terminal window, clone the miden-tutorials repository and navigate to the root of the repository using this command:
@@ -28,13 +28,13 @@ git clone git@github.com:0xPolygonMiden/miden-tutorials.git
 cd miden-tutorials
 ```
 
-### Step 2: Install the Miden Node
+### Step 2: Install the Miden node
 Next, install the miden-node crate using this command:
 ```bash
 cargo install miden-node --locked --features testing
 ```
 
-### Step 3: Initializing the Node
+### Step 3: Initializing the node
 To start the node, we first need to generate the genesis file. To do so, navigate to the `/node` directory and create the genesis file using this command:
 ```bash
 cd node
@@ -51,7 +51,7 @@ Account "faucet" has successfully been saved to: storage/accounts/faucet.mac
 Miden node genesis successful: storage/genesis.dat has been created
 ```
 
-### Step 4: Starting the Node
+### Step 4: Starting the node
 Now, to start the node, navigate to the storage directory and run this command:
 ```bash
 cd storage
@@ -74,7 +74,7 @@ The endpoint of the Miden node running locally is:
 http://localhost:57291
 ```
 
-### Reseting the Node
+### Reseting the node
 *If you need to reset the local state of the node and the rust-client, navigate to the root of the miden-tutorials repository and run this command:*
 ```bash 
 rm -rf rust-client/store.sqlite3 
@@ -82,7 +82,7 @@ rm -rf node/storage/accounts
 rm -rf node/storage/blocks
 ```
 
-## Specifying the Miden Node Endpoint 
+## Specifying the Miden node endpoint 
 To specify which miden node you are using with the examples in the rust-client, you can define the miden node endpoint in the `miden-client.toml` file:
 
 ```toml
@@ -95,7 +95,7 @@ port = 57291
 
 When using the web-client, you specify the miden-node endpoint when initializing the webclient, but we will cover this in later steps. 
 
-## Connecting to the Miden Testnet
+## Connecting to the Miden testnet
 To run the tutorial examples using the Miden testnet, use this endpoint:
 ```bash
 http://18.203.155.106:57291
