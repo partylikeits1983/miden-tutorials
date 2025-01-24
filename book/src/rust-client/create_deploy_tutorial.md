@@ -129,6 +129,8 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
+*When running the code above, there will be some unused imports, however, we will use these imports later on in the tutorial.*
+
 In this step, we will initialize a Miden client capable of syncing with the blockchain (in this case, our local node). Run the following command to execute `src/main.rs`:
 ```bash
 cargo run --release 
@@ -233,9 +235,12 @@ In this section we explained how to instantiate the Miden client, create a walle
 
 In the next section we will cover how to mint tokens from the faucet, consume notes, and send tokens to other accounts. 
 
-### Running the Example
+### Running the example
 To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 ```bash
 cd rust-client
 cargo run --release --bin create_mint_consume_send
 ```
+
+### Continue learning
+Next tutorial: [Mint, Consume, and Create Notes](mint_consume_create_tutorial.md)

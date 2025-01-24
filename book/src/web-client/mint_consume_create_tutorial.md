@@ -195,10 +195,9 @@ export async function webClient(): Promise<void> {
 }
 ```
 
-Let's run the `src/main.rs` program again:
-```bash
-cargo run --release 
-```
+Let's run the `src/webClient.ts` function again. Reload the page and click "Start WebClient". 
+
+**Note**: *Currently there is a minor bug in the WebClient that produces a warning message, "Error inserting code with root" when creating multiple accounts. This is currently being fixed.*
 
 The output will look like this:
 ```
@@ -213,6 +212,19 @@ Consuming minted notes...
 Notes consumed.
 Sending tokens to dummy account...
 Tokens sent.
+```
+
+### Resetting the MidenClientDB
+The Miden webclient stores account and note data in the browser. To clear the account and node data in the browser, paste this code snippet into the browser console:
+```javascript
+(async () => {
+  const dbs = await indexedDB.databases(); // Get all database names
+  for (const db of dbs) {
+    await indexedDB.deleteDatabase(db.name);
+    console.log(`Deleted database: ${db.name}`);
+  }
+  console.log("All databases deleted.");
+})();
 ```
 
 ### Running the Example
