@@ -82,19 +82,6 @@ rm -rf node/storage/accounts
 rm -rf node/storage/blocks
 ```
 
-## Specifying the Miden node endpoint 
-To specify which miden node you are using with the examples in the rust-client, you can define the miden node endpoint in the `miden-client.toml` file:
-
-```toml
-[rpc.endpoint]
-protocol = "http"
-host = "localhost"        # localhost
-# host = "18.203.155.106" # testnet
-port = 57291
-```
-
-When using the web-client, you specify the miden-node endpoint when initializing the webclient, but we will cover this in later steps. 
-
 ## Connecting to the Miden testnet
 To run the tutorial examples using the Miden testnet, use this endpoint:
 ```bash
