@@ -1,7 +1,7 @@
-# Running the Miden Node locally
+# Running the Miden node locally
 
 ### Setup
-1)  **Install Miden Node:**
+1)  **Install Miden node:**
 ```
 cargo install miden-node --locked --features testing
 ```

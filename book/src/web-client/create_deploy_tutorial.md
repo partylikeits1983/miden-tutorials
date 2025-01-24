@@ -295,7 +295,7 @@ In this section, we explained how to instantiate the Miden client, create a wall
 
 In the next section we will cover how to mint tokens from the faucet, consume notes, and send tokens to other accounts. 
 
-### Running the Example
+### Running the example
 To run a full working example navigate to the `web-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run the web application example:
 
 ```bash
