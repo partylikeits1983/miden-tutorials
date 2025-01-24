@@ -6,7 +6,7 @@ use rand_chacha::ChaCha20Rng;
 use tokio::time::Duration;
 
 use miden_client::{
-    accounts::{Account, AccountData, AccountStorageMode},
+    accounts::{Account, AccountData, AccountStorageMode, AccountType},
     config::{Endpoint, RpcConfig},
     crypto::RpoRandomCoin,
     rpc::TonicRpcClient,
@@ -18,13 +18,12 @@ use miden_client::{
     Client, ClientError, Felt,
 };
 
-use miden_lib::accounts::auth::RpoFalcon512;
 
 use miden_objects::{
     accounts::{AccountBuilder, AccountComponent, AuthSecretKey, StorageSlot},
     assembly::Assembler,
     crypto::{
-        dsa::rpo_falcon512::{PublicKey, SecretKey},
+        dsa::rpo_falcon512::SecretKey,
         hash::rpo::RpoDigest,
     },
     Word,
@@ -95,15 +94,15 @@ pub fn create_new_account(
     account_component: AccountComponent,
 ) -> (Account, Option<Word>, AuthSecretKey) {
     // Generate a new public/secret keypair (Falcon-512).
-    let (pub_key, auth_secret_key) = get_new_pk_and_authenticator();
+    let (_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
     // Build a new `Account` using the provided component plus the Falcon-512 verifier.
     // Uses a random seed for the account’s RNG.
     let (account, seed) = AccountBuilder::new()
-        .init_seed(ChaCha20Rng::from_entropy().gen()) // Random seed
-        .storage_mode(AccountStorageMode::Public)
-        .with_component(account_component) // The main contract logic
-        .with_component(RpoFalcon512::new(PublicKey::new(pub_key))) // The auth verifier
+        .init_seed(ChaCha20Rng::from_entropy().gen()) // random seed
+        .account_type(AccountType::RegularAccountImmutableCode) // account type
+        .storage_mode(AccountStorageMode::Public) // storage mode
+        .with_component(account_component) // main contract logic
         .build()
         .unwrap();
 

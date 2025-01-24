@@ -2,7 +2,7 @@
 *Using the Miden client in Rust to deploy and interact with a custom smart contract on Miden*
 
 ## Overview
-In this tutorial, we will build a simple counter smart contract that maintains a count, deploy it to the Miden testnet, and interact with it by incrementing the count.
+In this tutorial, we will build a simple counter smart contract that maintains a count, deploy it to the Miden testnet, and interact with it by incrementing the count. It is also possible to deploy the counter contract on a Miden node running locally similar to the previous tutorials.
 
 Using a script, we will invoke the increment function within the counter contract to update the count. This tutorial provides a foundational understanding of developing and deploying custom smart contracts on Miden.
 
@@ -258,8 +258,8 @@ end
 ```
 
 ## Step 3: Build the counter smart contract in Rust
-To build the counter contract copy and paste the following code into your src/main.rs file:
-```rs
+To build the counter contract copy and paste the following code ad the end of your your `src/main.rs` file:
+```rust
 // File path
 let file_path = Path::new("./masm/accounts/counter.masm");
 
