@@ -16,7 +16,7 @@ To mint notes with tokens from the faucet we created, Alice needs to call the fa
 
 Below is an example of a transaction request minting tokens from the faucet for Alice. This code snippet will create 5 transaction mint transaction requests. 
 
-Add this snippet to the end of your file in the `main()` function:
+Add this snippet to the end of your file in the `main()` function that we created in the previous chapter:
 ```rust
 let amount: u64 = 100;
 let fungible_asset = FungibleAsset::new(faucet_account.id(), amount).unwrap();
