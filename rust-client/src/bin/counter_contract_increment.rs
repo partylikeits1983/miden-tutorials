@@ -18,14 +18,10 @@ use miden_client::{
     Client, ClientError, Felt,
 };
 
-
 use miden_objects::{
     accounts::{AccountBuilder, AccountComponent, AuthSecretKey, StorageSlot},
     assembly::Assembler,
-    crypto::{
-        dsa::rpo_falcon512::SecretKey,
-        hash::rpo::RpoDigest,
-    },
+    crypto::{dsa::rpo_falcon512::SecretKey, hash::rpo::RpoDigest},
     Word,
 };
 
