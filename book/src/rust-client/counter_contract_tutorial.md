@@ -128,6 +128,25 @@ pub fn get_new_pk_and_authenticator() -> (Word, AuthSecretKey) {
     (pub_key, auth_secret_key)
 }
 
+pub fn create_new_account(
+    account_component: AccountComponent,
+) -> (Account, Option<Word>, AuthSecretKey) {
+    // Generate a new public/secret keypair (Falcon-512).
+    let (_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
+
+    // Build a new `Account` using the provided component plus the Falcon-512 verifier.
+    // Uses a random seed for the account’s RNG.
+    let (account, seed) = AccountBuilder::new()
+        .init_seed(ChaCha20Rng::from_entropy().gen()) // random seed
+        .account_type(AccountType::RegularAccountImmutableCode) // account type
+        .storage_mode(AccountStorageMode::Public) // storage mode
+        .with_component(account_component) // main contract logic
+        .build()
+        .unwrap();
+
+    (account, Some(seed), auth_secret_key)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
     let mut client = initialize_client().await?;
