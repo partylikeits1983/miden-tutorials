@@ -2,7 +2,7 @@
 *Using the Miden client in Rust to deploy and interact with a custom smart contract on Miden*
 
 ## Overview
-In this tutorial, we will build a simple counter smart contract that maintains a count, deploy it to the Miden testnet, and interact with it by incrementing the count. It is also possible to deploy the counter contract on a Miden node running locally similar to the previous tutorials.
+In this tutorial, we will build a simple counter smart contract that maintains a count, deploy it to the Miden testnet, and interact with it by incrementing the count. You can also deploy the counter contract on a locally running Miden node, similar to previous tutorials.
 
 Using a script, we will invoke the increment function within the counter contract to update the count. This tutorial provides a foundational understanding of developing and deploying custom smart contracts on Miden.
 
@@ -35,7 +35,7 @@ tokio = { version = "1.40", features = ["rt-multi-thread", "net", "macros"] }
 rand_chacha = "0.3.1"
 ```
 
-### Setup your `src/main.rs` file
+### Set up your `src/main.rs` file
 In the previous section, we explained how to instantiate the Miden client. We can reuse the same `initialize_client` function for our counter contract.
 
 Copy and paste the following code into your `src/main.rs` file:
@@ -181,7 +181,7 @@ masm/
 ### Custom Miden smart contract
 Below is our counter contract. It has a single exported procedure `increment_count`.
 
-At the beginning of the MASM file we define our imports. In this case we are importing `miden::account` and `std::sys`. 
+At the beginning of the MASM file, we define our imports. In this case, we import `miden::account` and `std::sys`.
 
 The import `miden::account` contains useful procedures for interacting with a smart contract's state. 
 
@@ -189,16 +189,16 @@ The import `std::sys` contains a useful procedure for truncating the operand sta
 
 Here's a breakdown of what the `increment_count` procedure does:
 
-1) Pushes the 0 onto the stack, which is the index of the storage slot we want to read
-2) Calls `account::get_item` with the index of 0
-3) Pushes 1 onto the stack
-4) Adds 1 and the count value returned from `account::get_item`
-5) Pushes 0 onto the stack, which is the index of the storage slot we want to write to
-6) Calls `account::set_item` which saves the incremented count to storage at index 0
-7) *For demonstration purposes*, pushes 111 onto the stack, calls `debug.stack`, then drops 111
+1) Pushes `0` onto the stack, representing the index of the storage slot to read.
+2) Calls `account::get_item` with the index of `0`.
+3) Pushes `1` onto the stack.
+4) Adds `1` to the count value returned from `account::get_item`.
+5) Pushes `0` onto the stack, which is the index of the storage slot we want to write to.
+6) Calls `account::set_item` which saves the incremented count to storage at index `0`
+7) *For demonstration purposes*, pushes `111` onto the stack, calls `debug.stack`, then drops `111`
 8) Calls `sys::truncate_stack` to truncate the stack to size 16.
 
-Inside of the `accounts/` directory, create the `counter.masm` file:
+Inside of the `masm/accounts/` directory, create the `counter.masm` file:
 ```masm
 use.miden::account
 use.std::sys
@@ -231,7 +231,7 @@ end
 ```
 
 ### Concept of function visibility and modifiers in Miden smart contracts
-The function `increment_count` in our Miden smart contract can be equated to an "external" Solidity function without a modifier, since any user can call the function and increment the count of the smart contract. The reason why anyone can call the `increment_count` procedure is because the procedure calls `account::incr_nonce` during its execution.
+The `increment_count` function in our Miden smart contract behaves like an "external" Solidity function without a modifier, meaning any user can call it to increment the contract's count. This is because it calls `account::incr_nonce` during execution.
 
 If the `increment_count` procedure did not call the `account::incr_nonce` procedure during its execution, only the deployer of the counter contract would be able to increment the count of the smart contract.
 
@@ -244,7 +244,7 @@ This is a Miden assembly script that will call the `increment_count` procedure d
 
 The string `{increment_count}` will be replaced with the hash of the `increment_count` procedure in our rust program.
 
-Inside of the `scripts/` directory, create the `counter_script.masm` file:
+Inside of the `masm/scripts/` directory, create the `counter_script.masm` file:
 ```masm
 begin
     # => []
@@ -260,7 +260,7 @@ To build the counter contract copy and paste the following code at the end of yo
 // -------------------------------------------------------------------------
 
 // 1A) Load the MASM file containing an account definition (e.g. a 'counter' contract).
-let file_path = Path::new("../masm/accounts/counter.masm");
+let file_path = Path::new("./masm/accounts/counter.masm");
 let account_code = fs::read_to_string(file_path).unwrap();
 
 // 1B) Prepare the assembler for compiling contract code (debug mode = true).
@@ -299,12 +299,11 @@ cargo run --release
 
 After the program executes, you should see the counter contract hash and contract id printed to the terminal, for example:
 ```
-counter_contract hash: "0x775d453f837db348507e140530dec49d4b2467e3eb0f8a000266c3f5dc726c9e"
-contract id: "0x10cfe13090ec4a24"
+counter_contract hash: "0xd693494753f51cb73a436916077c7b71c680a6dddc64dc364c1fe68f16f0c087"
+contract id: "0x082ed14c8ad9a866"
 ```
 
 ## Step 4: Computing the prodedure roots
-
 Each Miden assembly procedure has an associated hash. When calling a procedure in a smart contract, we need to know the hash of the procedure. The hashes of the procedures form a [Merkelized Abstract Syntax Tree (MAST).](https://0xpolygonmiden.github.io/miden-vm/design/programs.html)
 
 To get the procedures of the counter contract, add this code snippet to the end of your `main()` function:
@@ -335,7 +334,7 @@ Now that we know the hash of the `increment_count` procedure, we can call the pr
 
 Then we create a new transaction request with our custom script, and then pass the transaction request to the client. 
 
-Paste the following code into your src/main.rs file:
+Paste the following code at the end of your `src/main.rs` file:
 ```rust
 // -------------------------------------------------------------------------
 // STEP 2: Call the Counter Contract with a script
@@ -387,7 +386,7 @@ println!("storage item 0: {:?}", account.storage().get_item(0));
 ```
 
 ## Summary
-Our final `src/main.rs` file should look something like this:
+The final `src/main.rs` file should look like this:
 
 ```rust
 use std::{fs, path::Path, sync::Arc};
@@ -515,7 +514,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Creating Counter Contract.");
 
     // 1A) Load the MASM file containing an account definition (e.g. a 'counter' contract).
-    let file_path = Path::new("../masm/accounts/counter.masm");
+    let file_path = Path::new("./masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // 1B) Prepare the assembler for compiling contract code (debug mode = true).
@@ -570,7 +569,7 @@ async fn main() -> Result<(), ClientError> {
     let procedure_call = format!("{}", procedure_2_hash);
 
     // 2B) Load a MASM script that will reference our increment procedure.
-    let file_path = Path::new("../masm/scripts/counter_script.masm");
+    let file_path = Path::new("./masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // 2C) Replace the placeholder `{increment_count}` in the script with the actual procedure call.
@@ -615,11 +614,9 @@ async fn main() -> Result<(), ClientError> {
 The output of our program will look something like this:
 ```
 Client initialized successfully.
-Latest block: 665930
-
-[STEP 1] Creating Counter Contract.
-counter_contract hash: "0xe9494a7e4c4e716cac0a9436865fc5428e2add0b27c8df055d08f0e3021199c6"
-contract id: "0x0063bdb3aba02d53"
+Latest block: 666007
+counter_contract hash: "0xfe2b0aa0b22450225f601921b126f9fee362f5025adaa50af1090cfeec85c991"
+contract id: "0x033a750b3c969c5d"
 Procedure 1: "0x2259e69ba0e49a85f80d5ffc348e25a0386a0bbe7dbb58bc45b3f1493a03c725"
 number of procedures: 1
 
@@ -629,7 +626,7 @@ begin
     # => []
     call.0x2259e69ba0e49a85f80d5ffc348e25a0386a0bbe7dbb58bc45b3f1493a03c725
 end
-Stack state before step 2704:
+Stack state before step 2832:
 ├──  0: 111
 ├──  1: 0
 ├──  2: 0
@@ -656,16 +653,16 @@ Stack state before step 2704:
 ├── 23: 0
 └── 24: 0
 
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0xbce89fa6f63b678022efb8ec7148af470dc45e68031f83bcc8fc8c34cdee0c88
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0xfe800da4e2c4aa8997db37efccbb34a447a7a32f853927ff594729ee9df89959
 storage item 0: Ok(RpoDigest([0, 0, 0, 1]))
 ```
 
-The line in the output `Stack state before step 2704` ouputs the stack state when we call "debug.stack" in the `counter.masm` file.
+The line in the output `Stack state before step 2832` ouputs the stack state when we call "debug.stack" in the `counter.masm` file.
 
 To increment the count of the counter contract all you need is to know the account id of the counter, and the procedure hash of the `increment_count` procedure. To increment the count without deploying the counter each time, you can modify the program above to hardcode the account id of the counter and the procedure hash of the `increment_count` prodedure in the masm script.
 
 ### Running the Example
-To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
+To run the full example, navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 ```bash
 cd rust-client
 cargo run --release --bin counter_contract_increment
