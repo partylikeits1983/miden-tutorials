@@ -31,7 +31,7 @@ cd miden-tutorials
 ### Step 2: Install the Miden node
 Next, install the miden-node crate using this command:
 ```bash
-cargo install miden-node --locked --features testing
+cargo install miden-node --locked
 ```
 
 ### Step 3: Initializing the node
@@ -85,5 +85,5 @@ rm -rf node/storage/blocks
 ## Connecting to the Miden testnet
 To run the tutorial examples using the Miden testnet, use this endpoint:
 ```bash
-http://18.203.155.106:57291
+https://rpc.devnet.miden.io:443
 ```

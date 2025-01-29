@@ -48,7 +48,7 @@ pnpm install
 
 Install the Miden WebClient SDK:
 ```bash
-pnpm i @demox-labs/miden-sdk@0.6.1
+pnpm i @demox-labs/miden-sdk@0.6.1-next.4
 ```
 
 Save this as your `vite.config.ts` file:
@@ -98,11 +98,13 @@ const nodeEndpoint = "http://localhost:57291";
 
 export async function webClient(): Promise<void> {
   try {
-    let client = new WebClient();
+    // 1. Create client
+    const client = new WebClient();
     await client.create_client(nodeEndpoint);
 
-    let state = await client.sync_state();
-    console.log("Latest block number: ", state.block_num());
+    // 2. Sync and log block
+    const state = await client.sync_state();
+    console.log("Latest block number:", state.block_num());
   } catch (error) {
     console.error("Error", error);
     throw error;
@@ -115,7 +117,7 @@ Set this as your `App.tsx` file.
 
 ```ts
 // src/App.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import "./App.css";
 import { webClient } from "./webClient";
 
@@ -133,9 +135,7 @@ function App() {
 
       <p>Open the console to view logs</p>
 
-      {!clientStarted && (
-        <button onClick={handleClick}>Start the WebClient</button>
-      )}
+      {!clientStarted && <button onClick={handleClick}>Start WebClient</button>}
     </div>
   );
 }
@@ -190,6 +190,7 @@ export async function webClient(): Promise<void> {
     console.log("Latest block number:", state.block_num());
 
     // 3. Create Alice account (public, updatable)
+    console.log("Creating account for Alice");
     const aliceAccount = await client.new_wallet(
       AccountStorageMode.public(),
       true,
@@ -212,12 +213,14 @@ We'll create a public faucet with a token symbol, decimals, and a max supply. We
 
 Add this snippet to the end of the `webClient()` function:
 ```ts
+// 4. Create faucet
+console.log("Creating faucet...");
 const faucetAccount = await client.new_faucet(
-  AccountStorageMode.public(), // account type
-  false,                       // is fungible
-  "MID",                       // symbol
-  8,                           // decimals
-  BigInt(1_000_000)            // max supply
+  AccountStorageMode.public(),
+  false,
+  "MID",
+  8,
+  BigInt(1_000_000),
 );
 const faucetIdHex = faucetAccount.id().to_string();
 console.log("Faucet account ID:", faucetIdHex);
@@ -252,9 +255,10 @@ export async function webClient(): Promise<void> {
     console.log("Latest block number:", state.block_num());
 
     // 3. Create Alice account (public, updatable)
+    console.log("Creating account for Alice");
     const aliceAccount = await client.new_wallet(
-      AccountStorageMode.public(),  // account ty[e]
-      true                          // mutability
+      AccountStorageMode.public(),
+      true,
     );
     const aliceIdHex = aliceAccount.id().to_string();
     console.log("Alice's account ID:", aliceIdHex);
@@ -262,11 +266,11 @@ export async function webClient(): Promise<void> {
     // 4. Create faucet
     console.log("Creating faucet...");
     const faucetAccount = await client.new_faucet(
-      AccountStorageMode.public(), // account type
-      false,                       // is fungible
-      "MID",                       // symbol
-      8,                           // decimals
-      BigInt(1_000_000)            // max supply
+      AccountStorageMode.public(),
+      false,
+      "MID",
+      8,
+      BigInt(1_000_000),
     );
     const faucetIdHex = faucetAccount.id().to_string();
     console.log("Faucet account ID:", faucetIdHex);
@@ -286,9 +290,9 @@ pnpm run dev
 
 The output will look like this:
 ```
-Latest block number: 607494
-Alice's account id:  0x157d84660075ffcf
-Faucet account id: 0x2d7969e6125856d0
+Latest block number: 2247
+Alice's account ID: 0xd70b2072c6495d100000869a8bacf2
+Faucet account ID: 0x2d7e506fb88dde200000a1386efec8
 ```
 
 In this section, we explained how to instantiate the Miden client, create a wallet, and deploy a faucet.

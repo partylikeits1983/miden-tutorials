@@ -11,6 +11,9 @@ export.increment_count
     # => [count]
     push.1 add
 
+    # debug statement with client
+    debug.stack
+
     # => [count+1]
     push.0
 
@@ -19,9 +22,6 @@ export.increment_count
 
     # => []
     push.1 exec.account::incr_nonce
-
-    # debug statement with client
-    push.111 debug.stack drop
 
     # => []
     exec.sys::truncate_stack
