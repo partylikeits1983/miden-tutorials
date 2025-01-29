@@ -1,4 +1,4 @@
-# Summary
+# Miden Tutorials
 
 - [Tutorials](./tutorials_summary.md)
   - [Miden Node Setup](./miden_node_setup_tutorial.md)
