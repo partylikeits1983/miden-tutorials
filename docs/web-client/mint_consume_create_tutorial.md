@@ -14,22 +14,23 @@ To mint notes with tokens from the faucet we created, Alice can use the WebClien
 
 Below is an example of a transaction request minting tokens from the faucet for Alice. 
 
-Add this snippet to the `src/webClient.ts` function that we created in the previous chapter:
+Add this snippet to the end of the `webClient` function in the `src/webClient.ts` file that we created in the previous chapter:
 ```ts
-const targetId = AccountId.from_hex(account.id().to_string());
-const faucetId = AccountId.from_hex(faucet.id().to_string());
-const amount = BigInt(1000);
-
-await client.fetch_and_cache_account_auth_by_pub_key(faucetId);
+await client.fetch_and_cache_account_auth_by_pub_key(
+  AccountId.from_hex(faucetIdHex),
+);
 await client.sync_state();
 
+console.log("Minting tokens to Alice...");
 await client.new_mint_transaction(
-  targetId,          // target wallet id
-  faucetId,          // faucet id
-  NoteType.public(), // note type
-  amount             // amount
+  AccountId.from_hex(aliceIdHex),  // target wallet id
+  AccountId.from_hex(faucetIdHex), // faucet id
+  NoteType.public(),               // note type
+  BigInt(1000),                    // amount
 );
 
+console.log("Waiting 15 seconds for transaction confirmation...");
+await new Promise((resolve) => setTimeout(resolve, 15000));
 await client.sync_state();
 ```
 
@@ -52,19 +53,27 @@ Now that we know how to identify notes ready to consume, let's consume the notes
 
 The following code snippet identifies and consumes notes in a single transaction.
 
-Add this snippet to the `src/webClient.ts` function:
+Add this snippet to the end of the `webClient` function in the `src/webClient.ts` file:
 ```ts
-// get available notes
-let data = await client.get_consumable_notes(aliceAccountId);
-let noteIds = data.map(item => item.input_note_record().id().to_string());
+await client.fetch_and_cache_account_auth_by_pub_key(
+  AccountId.from_hex(aliceIdHex),
+);
 
-// consume notes
-console.log('consuming notes...');
-await client.fetch_and_cache_account_auth_by_pub_key(aliceAccountId);
+const mintedNotes = await client.get_consumable_notes(
+  AccountId.from_hex(aliceIdHex),
+);
+const mintedNoteIds = mintedNotes.map((n) =>
+  n.input_note_record().id().to_string(),
+);
+console.log("Minted note IDs:", mintedNoteIds);
+
+console.log("Consuming minted notes...");
 await client.new_consume_transaction(
-  aliceAccountId, // account id 
-  noteIds         // array of note ids to consume
-    );
+  AccountId.from_hex(aliceIdHex), // account id
+  mintedNoteIds,                  // array of note ids to consume
+);
+await client.sync_state();
+console.log("Notes consumed.");
 ```
 
 ## Step 4: Sending tokens to other accounts
@@ -80,22 +89,15 @@ Now as an example, Alice will send some tokens to an account in a single transac
 Add this snippet to the end of your file in the `main()` function:
 ```ts
 // send single P2ID note
-let dummy_account = "0x134fa8ef08d54f24";
-const receiverAccountId = AccountId.from_hex(dummy_account);
-
-let amount = BigInt(100);
-
-// Prepare the sender's account for sending tokens
-await client.fetch_and_cache_account_auth_by_pub_key(aliceAccountId);
-
+const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
+console.log("Sending tokens to dummy account...");
 await client.new_send_transaction(
-  aliceAccountId,    // sender account id
-  receiverAccountId, // receiver account id
-  faucetId,          // faucet account id
-  NoteType.public(), // note type
-  amount,            // amount
+  AccountId.from_hex(aliceIdHex),  // sender account id
+  AccountId.from_hex(dummyIdHex),  // receiver account id
+  AccountId.from_hex(faucetIdHex), // faucet account id
+  NoteType.public(),               // note type
+  BigInt(100),                     // amount
 );
-
 await client.sync_state();
 ```
 
@@ -122,6 +124,7 @@ export async function webClient(): Promise<void> {
     console.log("Latest block number:", state.block_num());
 
     // 3. Create Alice account (public, updatable)
+    console.log("Creating account for Alice");
     const aliceAccount = await client.new_wallet(
       AccountStorageMode.public(), // account type
       true                         // mutability
@@ -142,28 +145,33 @@ export async function webClient(): Promise<void> {
     console.log("Faucet account ID:", faucetIdHex);
 
     // 5. Mint tokens to Alice
-    await client.fetch_and_cache_account_auth_by_pub_key(AccountId.from_hex(faucetIdHex));
+    await client.fetch_and_cache_account_auth_by_pub_key(
+      AccountId.from_hex(faucetIdHex),
+    );
     await client.sync_state();
 
     console.log("Minting tokens to Alice...");
     await client.new_mint_transaction(
-      AccountId.from_hex(aliceIdHex),  // recipient id
+      AccountId.from_hex(aliceIdHex),  // target wallet id
       AccountId.from_hex(faucetIdHex), // faucet id
       NoteType.public(),               // note type
-      BigInt(1000)                     // amount
+      BigInt(1000),                    // amount
     );
 
-    // Optional: wait for confirmation
     console.log("Waiting 15 seconds for transaction confirmation...");
     await new Promise((resolve) => setTimeout(resolve, 15000));
-
     await client.sync_state();
-    await client.fetch_and_cache_account_auth_by_pub_key(AccountId.from_hex(aliceIdHex));
 
     // 6. Fetch minted notes
-    const mintedNotes = await client.get_consumable_notes(AccountId.from_hex(aliceIdHex));
-    const mintedNoteIds = mintedNotes.map(n =>
-      n.input_note_record().id().to_string()
+    await client.fetch_and_cache_account_auth_by_pub_key(
+      AccountId.from_hex(aliceIdHex),
+    );
+
+    const mintedNotes = await client.get_consumable_notes(
+      AccountId.from_hex(aliceIdHex),
+    );
+    const mintedNoteIds = mintedNotes.map((n) =>
+      n.input_note_record().id().to_string(),
     );
     console.log("Minted note IDs:", mintedNoteIds);
 
@@ -171,20 +179,20 @@ export async function webClient(): Promise<void> {
     console.log("Consuming minted notes...");
     await client.new_consume_transaction(
       AccountId.from_hex(aliceIdHex), // account id
-      mintedNoteIds                   // note id array
+      mintedNoteIds,                  // array of note ids to consume
     );
     await client.sync_state();
     console.log("Notes consumed.");
 
     // 8. Send tokens to a dummy account
-    const dummyIdHex = "0x134fa8ef08d54f24";
+    const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
     console.log("Sending tokens to dummy account...");
     await client.new_send_transaction(
       AccountId.from_hex(aliceIdHex),  // sender account id
-      AccountId.from_hex(dummyIdHex),  // recipient account id
-      AccountId.from_hex(faucetIdHex), // faucet id
+      AccountId.from_hex(dummyIdHex),  // receiver account id
+      AccountId.from_hex(faucetIdHex), // faucet account id
       NoteType.public(),               // note type
-      BigInt(100)                      // amount
+      BigInt(100),                     // amount
     );
     await client.sync_state();
     console.log("Tokens sent.");
@@ -202,9 +210,9 @@ Let's run the `src/webClient.ts` function again. Reload the page and click "Star
 The output will look like this:
 ```
 Latest block number: 4807
-Alice's account ID: 0x123412a98b2194fe
+Alice's account ID: 0x1a20f4d1321e681000005020e69b1a
 Creating faucet...
-Faucet account ID: 0x2db29c69d04320bf
+Faucet account ID: 0xaa86a6f05ae40b2000000f26054d5d
 Minting tokens to Alice...
 Waiting 15 seconds for transaction confirmation...
 Minted note IDs: ['0x4edbb3d5dbdf6944f229a4711533114e0602ad48b70cda400993925c61f5bfaa']

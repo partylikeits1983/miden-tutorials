@@ -3,7 +3,7 @@
 ### Setup
 1)  **Install Miden node:**
 ```
-cargo install miden-node --locked --features testing
+cargo install miden-node --locked 
 ```
 
 2) **In the root of the miden-tutorials directory, run the following:**

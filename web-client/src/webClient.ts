@@ -18,6 +18,7 @@ export async function webClient(): Promise<void> {
     console.log("Latest block number:", state.block_num());
 
     // 3. Create Alice account (public, updatable)
+    console.log("Creating account for Alice");
     const aliceAccount = await client.new_wallet(
       AccountStorageMode.public(),
       true,
@@ -51,11 +52,10 @@ export async function webClient(): Promise<void> {
       BigInt(1000),
     );
 
-    // Optional: wait for confirmation
     console.log("Waiting 15 seconds for transaction confirmation...");
     await new Promise((resolve) => setTimeout(resolve, 15000));
-
     await client.sync_state();
+
     await client.fetch_and_cache_account_auth_by_pub_key(
       AccountId.from_hex(aliceIdHex),
     );
@@ -79,7 +79,7 @@ export async function webClient(): Promise<void> {
     console.log("Notes consumed.");
 
     // 8. Send tokens to a dummy account
-    const dummyIdHex = "0x134fa8ef08d54f24";
+    const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
     console.log("Sending tokens to dummy account...");
     await client.new_send_transaction(
       AccountId.from_hex(aliceIdHex),
