@@ -192,8 +192,8 @@ export async function webClient(): Promise<void> {
     // 3. Create Alice account (public, updatable)
     console.log("Creating account for Alice");
     const aliceAccount = await client.new_wallet(
-      AccountStorageMode.public(),
-      true,
+      AccountStorageMode.public(), // account type
+      true,                        // mutability
     );
     const aliceIdHex = aliceAccount.id().to_string();
     console.log("Alice's account ID:", aliceIdHex);
@@ -216,11 +216,11 @@ Add this snippet to the end of the `webClient()` function:
 // 4. Create faucet
 console.log("Creating faucet...");
 const faucetAccount = await client.new_faucet(
-  AccountStorageMode.public(),
-  false,
-  "MID",
-  8,
-  BigInt(1_000_000),
+  AccountStorageMode.public(), // account type
+  false,                       // is fungible
+  "MID",                       // symbol
+  8,                           // decimals
+  BigInt(1_000_000)            // max supply
 );
 const faucetIdHex = faucetAccount.id().to_string();
 console.log("Faucet account ID:", faucetIdHex);
@@ -266,11 +266,11 @@ export async function webClient(): Promise<void> {
     // 4. Create faucet
     console.log("Creating faucet...");
     const faucetAccount = await client.new_faucet(
-      AccountStorageMode.public(),
-      false,
-      "MID",
-      8,
-      BigInt(1_000_000),
+      AccountStorageMode.public(), // account type
+      false,                       // is fungible
+      "MID",                       // symbol
+      8,                           // decimals
+      BigInt(1_000_000)            // max supply
     );
     const faucetIdHex = faucetAccount.id().to_string();
     console.log("Faucet account ID:", faucetIdHex);
