@@ -1,15 +1,19 @@
 # Mint, Consume, and Create Notes
+
 *Using the Miden client in Rust to mint, consume, and create notes*
 
 ## Overview
+
 In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for *Alice*, consume the newly created notes, and demonstrate how to send assets to other accounts.
 
 ## What we'll cover
-* Minting tokens from a faucet
-* Consuming notes to fund an account
-* Sending tokens to other users
+
+- Minting tokens from a faucet
+- Consuming notes to fund an account
+- Sending tokens to other users
 
 ## Step 1: Minting tokens from the faucet
+
 To mint notes with tokens from the faucet we created, Alice needs to call the faucet with a mint transaction request. 
 
 *In essence, a transaction request is a structured template that outlines the data required to generate a zero-knowledge proof of a state change of an account. It specifies which input notes (if any) will be consumed, includes an optional transaction script to execute, and enumerates the set of notes expected to be created (if any).*
@@ -17,6 +21,7 @@ To mint notes with tokens from the faucet we created, Alice needs to call the fa
 Below is an example of a transaction request minting tokens from the faucet for Alice. This code snippet will create 5 transaction mint transaction requests. 
 
 Add this snippet to the end of your file in the `main()` function that we created in the previous chapter:
+
 ```rust
 //------------------------------------------------------------
 // STEP 3: Mint 5 notes of 100 tokens for Alice
@@ -49,6 +54,7 @@ client.sync_state().await?;
 ```
 
 ## Step 2: Identifying consumable notes
+
 Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction. 
 
 Minting a note from a faucet on Miden means a faucet account creates a new note targeted to the requesting account. The requesting account needs to consume this new note to have the assets appear in their account.
@@ -64,11 +70,13 @@ let consumable_notes = client.get_consumable_notes(Some(alice_account.id())).awa
 ```
 
 ## Step 3: Consuming multiple notes in a single transaction:
+
 Now that we know how to identify notes ready to consume, let's consume the notes created by the faucet in a single transaction. After consuming the notes, Alice's wallet balance will be updated.
 
 The following code snippet identifies consumable notes and consumes them in a single transaction.
 
 Add this snippet to the end of your file in the `main()` function:
+
 ```Rust
 //------------------------------------------------------------
 // STEP 4: Alice consumes all her notes
@@ -107,6 +115,7 @@ loop {
 ```
 
 ## Step 4: Sending tokens to other accounts
+
 After consuming the notes, Alice has tokens in her wallet. Now, she wants to send tokens to her friends. She has two options: create a separate transaction for each transfer or batch multiple transfers into a single transaction.
 
 *The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height.*
@@ -116,11 +125,13 @@ In our example, Alice will now send 50 tokens to 5 different accounts.
 For the sake of the example, the first four P2ID transfers are handled in a single transaction, and the fifth transfer is a standard P2ID transfer. 
 
 ### Output multiple P2ID notes in a single transaction
+
 To output multiple notes in a single transaction we need to create a list of our expected output notes. The expected output notes are the notes that we expect to create in our transaction request.
 
 In the snippet below, we create an empty vector to store five P2ID output notes, loop over five iterations `(using 0..=4)` to create five unique dummy account IDs, build a P2ID note for each one, and push each note onto the vector. Finally, we build a transaction request using `.with_own_output_notes()`—passing in all five notes—and submit it to the node.
 
 Add this snippet to the end of your file in the `main()` function:
+
 ```Rust
 //------------------------------------------------------------
 // STEP 5: Alice sends 5 notes of 50 tokens to 5 users
@@ -173,9 +184,11 @@ println!("Submitted a transaction with 4 P2ID notes.");
 ```
 
 ### Basic P2ID transfer
+
 Now as an example, Alice will send some tokens to an account in a single transaction.
 
 Add this snippet to the end of your file in the `main()` function:
+
 ```Rust
 // Send 50 tokens to 1 more account as a single P2ID transaction
 println!("Submitting one more single P2ID transaction...");
@@ -218,7 +231,9 @@ client.submit_transaction(tx_execution_result).await?;
 Note: *In a production environment do not use `AccountId::new_dummy()`, this is simply for the sake of the tutorial example.*
 
 ## Summary
+
 Your `src/main.rs` function should now look like this:
+
 ```rust
 use miden_client::{
     account::{
@@ -523,11 +538,13 @@ async fn main() -> Result<(), ClientError> {
 ```
 
 Let's run the `src/main.rs` program again:
+
 ```bash
 cargo run --release 
 ```
 
 The output will look like this:
+
 ```
 Client initialized successfully.
 Latest block number: 1519
@@ -565,11 +582,14 @@ and then Alice sent 5 separate 50-token notes to 5 different users.
 ```
 
 ### Running the example
+
 To run a full working example navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
+
 ```bash
 cd rust-client
 cargo run --release --bin create_mint_consume_send
 ```
 
 ### Continue learning
+
 Next tutorial: [Deploying a Counter Contract](counter_contract_tutorial.md)
