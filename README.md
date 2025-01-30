@@ -9,9 +9,3 @@ This repository is organized into several parts:
 3. **node** - contains the necessary config files for running the miden-node locally.
 4. **rust-client** - contains examples for interacting with the Miden Rollup using **Rust**. 
 5. **web-client** - contains examples for interacting with the Miden Rollup in the browser. 
-
----
-
-## Getting Started
-
-To get started, refer to the book directory.
