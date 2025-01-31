@@ -101,5 +101,5 @@ rm -rf node/storage/blocks
 To run the tutorial examples using the Miden testnet, use this endpoint:
 
 ```bash
-https://rpc.devnet.miden.io:443
+https://rpc.testnet.miden.io:443
 ```
