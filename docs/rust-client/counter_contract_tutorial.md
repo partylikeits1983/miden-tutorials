@@ -77,7 +77,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     // RPC endpoint and timeout
     let endpoint = Endpoint::new(
         "https".to_string(),
-        "rpc.devnet.miden.io".to_string(),
+        "rpc.testnet.miden.io".to_string(),
         Some(443),
     );
     let timeout_ms = 10_000;
@@ -442,7 +442,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     // RPC endpoint and timeout
     let endpoint = Endpoint::new(
         "https".to_string(),
-        "rpc.devnet.miden.io".to_string(),
+        "rpc.testnet.miden.io".to_string(),
         Some(443),
     );
     let timeout_ms = 10_000;
@@ -676,5 +676,5 @@ To run the full example, navigate to the `rust-client` directory in the [miden-t
 
 ```bash
 cd rust-client
-cargo run --release --bin counter_contract_increment
+cargo run --release --bin counter_contract_deploy
 ```
