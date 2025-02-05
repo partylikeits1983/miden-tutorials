@@ -321,16 +321,28 @@ contract id: "0x082ed14c8ad9a866"
 
 Each Miden assembly procedure has an associated hash. When calling a procedure in a smart contract, we need to know the hash of the procedure. The hashes of the procedures form a [Merkelized Abstract Syntax Tree (MAST).](https://0xpolygonmiden.github.io/miden-vm/design/programs.html)
 
-To get the procedures of the counter contract, add this code snippet to the end of your `main()` function:
+To get the root hash of the `increment_count` procedure, add this code snippet to the end of your `main()` function:
 
 ```rust
-// Print procedure root hashes
-let procedures = counter_contract.code().procedure_roots();
-let procedures_vec: Vec<RpoDigest> = procedures.collect();
-for (index, procedure) in procedures_vec.iter().enumerate() {
-    println!("Procedure {}: {:?}", index + 1, procedure.to_hex());
-}
-println!("number of procedures: {}", procedures_vec.len());
+// Print the procedure root hash
+let get_increment_export = counter_component
+    .library()
+    .exports()
+    .find(|export| export.name.as_str() == "increment_count")
+    .unwrap();
+
+let get_increment_count_mast_id = counter_component
+    .library()
+    .get_export_node_id(get_increment_export);
+
+let increment_count_root = counter_component
+    .library()
+    .mast_forest()
+    .get_node_by_id(get_increment_count_mast_id)
+    .unwrap()
+    .digest().to_hex();
+
+println!("increment_count procedure root: {:?}", increment_count_root);
 ```
 
 Run the following command to execute src/main.rs:
@@ -341,7 +353,7 @@ cargo run --release
 
 After the program executes, you should see the procedure hashes printed to the terminal, for example:
 ```
-Procedure 1: "0x2259e69ba0e49a85f80d5ffc348e25a0386a0bbe7dbb58bc45b3f1493a03c725"
+increment_count procedure root: "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54"
 ```
 
 This is the hash of the `increment_count` procedure.
@@ -360,16 +372,12 @@ Paste the following code at the end of your `src/main.rs` file:
 // -------------------------------------------------------------------------
 println!("\n[STEP 2] Call Counter Contract With Script");
 
-// Grab the first procedure hash
-let procedure_2_hash = procedures_vec[0].to_hex();
-let procedure_call = format!("{}", procedure_2_hash);
-
 // Load the MASM script referencing the increment procedure
 let file_path = Path::new("./masm/scripts/counter_script.masm");
 let original_code = fs::read_to_string(file_path).unwrap();
 
 // Replace the placeholder with the actual procedure call
-let replaced_code = original_code.replace("{increment_count}", &procedure_call);
+let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
 println!("Final script:\n{}", replaced_code);
 
 // Compile the script referencing our procedure
@@ -403,7 +411,7 @@ client.sync_state().await.unwrap();
 // Retrieve updated contract data to see the incremented counter
 let account = client.get_account(counter_contract.id()).await.unwrap();
 println!(
-    "storage item 0: {:?}",
+    "counter contract storage: {:?}",
     account.unwrap().account().storage().get_item(0)
 );
 ```
@@ -434,7 +442,7 @@ use miden_client::{
 use miden_objects::{
     account::{AccountBuilder, AccountComponent, AuthSecretKey, StorageSlot},
     assembly::Assembler,
-    crypto::{dsa::rpo_falcon512::SecretKey, hash::rpo::RpoDigest},
+    crypto::dsa::rpo_falcon512::SecretKey,
     Word,
 };
 
@@ -508,17 +516,22 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Creating counter contract.");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("./masm/accounts/counter.masm");
+    let file_path = Path::new("../masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
     let assembler: Assembler = TransactionKernel::assembler().with_debug_mode(true);
 
     // Compile the account code into `AccountComponent` with one storage slot
-    let account_component = AccountComponent::compile(
+    let counter_component = AccountComponent::compile(
         account_code,
         assembler,
-        vec![StorageSlot::Value(Word::default())],
+        vec![StorageSlot::Value([
+            Felt::new(0),
+            Felt::new(0),
+            Felt::new(0),
+            Felt::new(0),
+        ])],
     )
     .unwrap()
     .with_supports_all_types();
@@ -534,7 +547,7 @@ async fn main() -> Result<(), ClientError> {
         .anchor((&anchor_block).try_into().unwrap())
         .account_type(AccountType::RegularAccountImmutableCode)
         .storage_mode(AccountStorageMode::Public)
-        .with_component(account_component)
+        .with_component(counter_component.clone())
         .build()
         .unwrap();
 
@@ -544,7 +557,9 @@ async fn main() -> Result<(), ClientError> {
     );
     println!("contract id: {:?}", counter_contract.id().to_hex());
 
-    // Since the counter contract is public and does sign any transactions, auth_secrete_key is not required.
+    println!("account_storage: {:?}", counter_contract.storage());
+
+    // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -558,29 +573,38 @@ async fn main() -> Result<(), ClientError> {
         .await
         .unwrap();
 
-    // Print procedure root hashes
-    let procedures = counter_contract.code().procedure_roots();
-    let procedures_vec: Vec<RpoDigest> = procedures.collect();
-    for (index, procedure) in procedures_vec.iter().enumerate() {
-        println!("Procedure {}: {:?}", index + 1, procedure.to_hex());
-    }
-    println!("number of procedures: {}", procedures_vec.len());
+    // Print the procedure root hash
+    let get_increment_export = counter_component
+        .library()
+        .exports()
+        .find(|export| export.name.as_str() == "increment_count")
+        .unwrap();
+
+    let get_increment_count_mast_id = counter_component
+        .library()
+        .get_export_node_id(get_increment_export);
+
+    let increment_count_root = counter_component
+        .library()
+        .mast_forest()
+        .get_node_by_id(get_increment_count_mast_id)
+        .unwrap()
+        .digest()
+        .to_hex();
+
+    println!("increment_count procedure root: {:?}", increment_count_root);
 
     // -------------------------------------------------------------------------
     // STEP 2: Call the Counter Contract with a script
     // -------------------------------------------------------------------------
     println!("\n[STEP 2] Call Counter Contract With Script");
 
-    // Grab the first procedure hash
-    let procedure_2_hash = procedures_vec[0].to_hex();
-    let procedure_call = format!("{}", procedure_2_hash);
-
     // Load the MASM script referencing the increment procedure
-    let file_path = Path::new("./masm/scripts/counter_script.masm");
+    let file_path = Path::new("../masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &procedure_call);
+    let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
     println!("Final script:\n{}", replaced_code);
 
     // Compile the script referencing our procedure
@@ -614,7 +638,7 @@ async fn main() -> Result<(), ClientError> {
     // Retrieve updated contract data to see the incremented counter
     let account = client.get_account(counter_contract.id()).await.unwrap();
     println!(
-        "storage item 0: {:?}",
+        "counter contract storage: {:?}",
         account.unwrap().account().storage().get_item(0)
     );
 
@@ -626,13 +650,13 @@ The output of our program will look something like this:
 
 ```
 Client initialized successfully.
-Latest block: 34911
+Latest block: 118178
 
 [STEP 1] Creating counter contract.
-counter_contract hash: "0x77358072810bc3db93e5527399ab7383889b0de3430053506ab5fc1dfe22f858"
-contract id: "0xa0494a47d2ac49000000afba9465bf"
-Procedure 1: "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54"
-number of procedures: 1
+counter_contract hash: "0x07fcd02b0e63e09d4b618391bef24e0fab6f675bc3824bc181389e9d27fc8855"
+contract id: "0x42ef7fd55b9a20000001822c108db1"
+account_storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
+increment_count procedure root: "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54"
 
 [STEP 2] Call Counter Contract With Script
 Final script:
@@ -640,7 +664,7 @@ begin
     # => []
     call.0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54
 end
-Stack state before step 2598:
+Stack state before step 2384:
 ├──  0: 1
 ├──  1: 0
 ├──  2: 0
@@ -662,11 +686,11 @@ Stack state before step 2598:
 ├── 18: 0
 └── 19: 0
 
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0x7065f2a5af6fee6cb585c1c10a48a667f3980d6468dc6d3b3010789b4db056d3
-storage item 0: Ok(RpoDigest([0, 0, 0, 1]))
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0x30585bbdbbdb8fe481b01659526746e52ae26c22c060d7a7ce232fa30c90b04c
+counter contract storage: Ok(RpoDigest([0, 0, 0, 1]))
 ```
 
-The line in the output `Stack state before step 2598` ouputs the stack state when we call "debug.stack" in the `counter.masm` file.
+The line in the output `Stack state before step 2384` ouputs the stack state when we call "debug.stack" in the `counter.masm` file.
 
 To increment the count of the counter contract all you need is to know the account id of the counter and the procedure hash of the `increment_count` procedure. To increment the count without deploying the counter each time, you can modify the program above to hardcode the account id of the counter and the procedure hash of the `increment_count` prodedure in the masm script.
 

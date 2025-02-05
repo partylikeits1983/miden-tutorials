@@ -118,7 +118,7 @@ async fn main() -> Result<(), ClientError> {
     // Prepare assembler (debug mode = true)
     let assembler: Assembler = TransactionKernel::assembler().with_debug_mode(true);
 
-    // Compile the account code into `AccountComponent` with the count value returned by the node 
+    // Compile the account code into `AccountComponent` with the count value returned by the node
     let account_component = AccountComponent::compile(
         account_code,
         assembler,
@@ -127,7 +127,7 @@ async fn main() -> Result<(), ClientError> {
     .unwrap()
     .with_supports_all_types();
 
-    // Initialize the AccountStorage with the count value returned by the node  
+    // Initialize the AccountStorage with the count value returned by the node
     let account_storage =
         AccountStorage::new(vec![StorageSlot::Value(count_value.value())]).unwrap();
 
