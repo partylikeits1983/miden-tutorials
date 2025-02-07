@@ -59,7 +59,7 @@ export.copy_count
   # => [count]
   push.0 
 
-  # [index, count+1]
+  # [index, count]
   exec.account::set_item
 
   # => []
