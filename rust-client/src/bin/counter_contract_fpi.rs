@@ -6,19 +6,22 @@ use rand_chacha::ChaCha20Rng;
 use tokio::time::Duration;
 
 use miden_client::{
-    account::{Account, AccountCode, AccountId, AccountType},
+    account::{Account, AccountCode, AccountId, AccountStorageMode, AccountType},
     asset::AssetVault,
     crypto::RpoRandomCoin,
-    rpc::{domain::account::AccountDetails, Endpoint, TonicRpcClient},
+    rpc::{
+        domain::account::{AccountDetails, AccountStorageRequirements},
+        Endpoint, TonicRpcClient,
+    },
     store::{sqlite_store::SqliteStore, StoreAuthenticator},
-    transaction::{TransactionKernel, TransactionRequestBuilder},
+    transaction::{ForeignAccount, TransactionKernel, TransactionRequestBuilder},
     Client, ClientError, Felt,
 };
 
 use miden_objects::{
-    account::{AccountComponent, AccountStorage, AuthSecretKey, StorageSlot},
+    account::{AccountBuilder, AccountComponent, AccountStorage, AuthSecretKey, StorageSlot},
     assembly::Assembler,
-    crypto::{dsa::rpo_falcon512::SecretKey, hash::rpo::RpoDigest},
+    crypto::dsa::rpo_falcon512::SecretKey,
     Word,
 };
 
@@ -87,13 +90,106 @@ async fn main() -> Result<(), ClientError> {
     println!("Latest block: {}", sync_summary.block_num);
 
     // -------------------------------------------------------------------------
-    // STEP 1: Build Counter Contract From Public State
+    // STEP 1: Create the Count Reader Contract
     // -------------------------------------------------------------------------
-    println!("\n[STEP 1] Building counter contract from public state");
+    println!("\n[STEP 1] Creating count reader contract.");
+
+    // Load the MASM file for the counter contract
+    let file_path = Path::new("../masm/accounts/count_reader.masm");
+    let raw_account_code = fs::read_to_string(file_path).unwrap();
+
+    // Define the counter contract account id and `get_count` procedure root hash
+    let counter_contract_id = AccountId::from_hex("0x87c16e4aeb31cf00000296bc97f065").unwrap();
+    let get_count_root = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
+
+    let count_reader_code = raw_account_code
+        .replace("{get_count_proc_root}", &get_count_root)
+        .replace(
+            "{account_id_prefix}",
+            &counter_contract_id.prefix().to_string(),
+        )
+        .replace(
+            "{account_id_suffix}",
+            &counter_contract_id.suffix().to_string(),
+        );
+
+    // Initialize assembler (debug mode = true)
+    let assembler: Assembler = TransactionKernel::assembler().with_debug_mode(true);
+
+    // Compile the account code into `AccountComponent` with one storage slot
+    let count_reader_component = AccountComponent::compile(
+        count_reader_code,
+        assembler,
+        vec![StorageSlot::Value(Word::default())],
+    )
+    .unwrap()
+    .with_supports_all_types();
+
+    // Init seed for the count reader contract
+    let init_seed = ChaCha20Rng::from_entropy().gen();
+
+    // Using latest block as the anchor block
+    let anchor_block = client.get_latest_epoch_block().await.unwrap();
+
+    // Build the count reader contract with the component
+    let (count_reader_contract, counter_seed) = AccountBuilder::new(init_seed)
+        .anchor((&anchor_block).try_into().unwrap())
+        .account_type(AccountType::RegularAccountImmutableCode)
+        .storage_mode(AccountStorageMode::Public)
+        .with_component(count_reader_component.clone())
+        .build()
+        .unwrap();
+
+    println!(
+        "count reader contract id: {:?}",
+        count_reader_contract.id().to_hex()
+    );
+    println!(
+        "count reader  storage: {:?}",
+        count_reader_contract.storage()
+    );
+
+    // Since the counter reader contract is public and does sign any transactions, auth_secret_key is not required.
+    // However, to import to the client, we must generate a random value.
+    let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
+
+    client
+        .add_account(
+            &count_reader_contract.clone(),
+            Some(counter_seed),
+            &auth_secret_key,
+            false,
+        )
+        .await
+        .unwrap();
+
+    // Getting the root hash of the `copy_count` procedure
+    let get_proc_export = count_reader_component
+        .library()
+        .exports()
+        .find(|export| export.name.as_str() == "copy_count")
+        .unwrap();
+
+    let get_proc_mast_id = count_reader_component
+        .library()
+        .get_export_node_id(get_proc_export);
+
+    let copy_count_proc_root = count_reader_component
+        .library()
+        .mast_forest()
+        .get_node_by_id(get_proc_mast_id)
+        .unwrap()
+        .digest()
+        .to_hex();
+
+    println!("copy_count procedure root: {:?}", copy_count_proc_root);
+
+    // -------------------------------------------------------------------------
+    // STEP 2: Build & Get State of the Counter Contract
+    // -------------------------------------------------------------------------
+    println!("\n[STEP 2] Building counter contract from public state");
 
     // Define the Counter Contract account id from counter contract deploy
-    let counter_contract_id = AccountId::from_hex("0x87c16e4aeb31cf00000296bc97f065").unwrap();
-
     let account_details = client
         .test_rpc_api()
         .get_account_update(counter_contract_id)
@@ -128,11 +224,11 @@ async fn main() -> Result<(), ClientError> {
     .with_supports_all_types();
 
     // Initialize the AccountStorage with the count value returned by the node
-    let account_storage =
+    let counter_storage =
         AccountStorage::new(vec![StorageSlot::Value(count_value.value())]).unwrap();
 
     // Build AccountCode from components
-    let account_code = AccountCode::from_components(
+    let counter_code = AccountCode::from_components(
         &[counter_component.clone()],
         AccountType::RegularAccountImmutableCode,
     )
@@ -145,81 +241,48 @@ async fn main() -> Result<(), ClientError> {
     let counter_contract = Account::from_parts(
         counter_contract_id,
         vault,
-        account_storage,
-        account_code,
+        counter_storage,
+        counter_code,
         counter_nonce,
     );
 
     // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
-    let (_, _auth_secret_key) = get_new_pk_and_authenticator();
+    let (_, auth_secret_key) = get_new_pk_and_authenticator();
 
     client
-        .add_account(&counter_contract.clone(), None, &_auth_secret_key, true)
+        .add_account(&counter_contract.clone(), None, &auth_secret_key, true)
         .await
         .unwrap();
 
     // -------------------------------------------------------------------------
-    // STEP 2: Call the Counter Contract with a script
+    // STEP 3: Call the Counter Contract via Foreign Procedure Invocation (FPI)
     // -------------------------------------------------------------------------
-    println!("\n[STEP 2] Call the increment_count procedure in the counter contract");
-
-    // Print procedure root hashes
-    let procedures = counter_contract.code().procedure_roots();
-    let procedures_vec: Vec<RpoDigest> = procedures.collect();
-    for (index, procedure) in procedures_vec.iter().enumerate() {
-        println!("Procedure {}: {:?}", index + 1, procedure.to_hex());
-    }
-    println!("number of procedures: {}", procedures_vec.len());
-
-    /*
-    let names = counter_component.library().exports();
-    println!("names: {:?}", names);
-
-    let names_vec: Vec<QualifiedProcedureName> = names.collect();
-    for(index, procedure) in names.iter().enumerate() {
-      println!("names: {:?}", procedure);
-    }
-    */
-
-    let get_increment_export = counter_component
-        .library()
-        .exports()
-        .find(|export| export.name.as_str() == "increment_count")
-        .unwrap();
-
-    let get_increment_count_mast_id = counter_component
-        .library()
-        .get_export_node_id(get_increment_export);
-
-    let increment_count_root = counter_component
-        .library()
-        .mast_forest()
-        .get_node_by_id(get_increment_count_mast_id)
-        .unwrap()
-        .digest()
-        .to_hex();
+    println!("\n[STEP 3] Call Counter Contract with FPI from Count Copy Contract");
 
     // Load the MASM script referencing the increment procedure
-    let file_path = Path::new("../masm/scripts/counter_script.masm");
+    let file_path = Path::new("../masm/scripts/reader_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
-    // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
-    println!("Final script:\n{}", replaced_code);
+    // Replace {get_count} and {account_id}
+    let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_root);
 
-    // Compile the script
+    // Compile the script referencing our procedure
     let tx_script = client.compile_tx_script(vec![], &replaced_code).unwrap();
 
+    let foreign_account =
+        ForeignAccount::public(counter_contract_id, AccountStorageRequirements::default()).unwrap();
+
     // Build a transaction request with the custom script
-    let tx_increment_request = TransactionRequestBuilder::new()
+    let tx_request = TransactionRequestBuilder::new()
+        .with_foreign_accounts([foreign_account])
         .with_custom_script(tx_script)
         .unwrap()
         .build();
 
     // Execute the transaction locally
     let tx_result = client
-        .new_transaction(counter_contract.id(), tx_increment_request)
+        .new_transaction(count_reader_contract.id(), tx_request)
         .await
         .unwrap();
 
@@ -237,10 +300,19 @@ async fn main() -> Result<(), ClientError> {
     client.sync_state().await.unwrap();
 
     // Retrieve updated contract data to see the incremented counter
-    let account = client.get_account(counter_contract.id()).await.unwrap();
+    let account_1 = client.get_account(counter_contract.id()).await.unwrap();
     println!(
         "counter contract storage: {:?}",
-        account.unwrap().account().storage().get_item(0)
+        account_1.unwrap().account().storage().get_item(0)
+    );
+
+    let account_2 = client
+        .get_account(count_reader_contract.id())
+        .await
+        .unwrap();
+    println!(
+        "count reader contract storage: {:?}",
+        account_2.unwrap().account().storage().get_item(0)
     );
 
     Ok(())

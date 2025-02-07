@@ -163,7 +163,7 @@ masm/
 
 ### Custom Miden smart contract
 
-Below is our counter contract. It has a single exported procedure `increment_count`.
+Below is our counter contract. It has a two exported procedures: `get_count` and `increment_count`.
 
 At the beginning of the MASM file, we define our imports. In this case, we import `miden::account` and `std::sys`.
 
@@ -171,7 +171,14 @@ The import `miden::account` contains useful procedures for interacting with a sm
 
 The import `std::sys` contains a useful procedure for truncating the operand stack at the end of a procedure.
 
-Here's a breakdown of what the `increment_count` procedure does:
+#### Here's a breakdown of what the `get_count` procedure does:
+
+1. Pushes `0` onto the stack, representing the index of the storage slot to read.
+2. Calls `account::get_item` with the index of `0`.
+3. Calls `sys::truncate_stack` to truncate the stack to size 16.
+4. The value returned from `account::get_item` is still on the stack and will be returned when this procedure is called.
+
+#### Here's a breakdown of what the `increment_count` procedure does:
 
 1. Pushes `0` onto the stack, representing the index of the storage slot to read.
 2. Calls `account::get_item` with the index of `0`.
@@ -187,6 +194,17 @@ Inside of the `masm/accounts/` directory, create the `counter.masm` file:
 ```masm
 use.miden::account
 use.std::sys
+
+export.get_count
+    # => []
+    push.0
+    
+    # => [index]
+    exec.account::get_item
+
+    # => [count]
+    exec.sys::truncate_stack
+end
 
 export.increment_count
     # => []

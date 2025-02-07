@@ -1,6 +1,17 @@
 use.miden::account
 use.std::sys
 
+export.get_count
+    # => []
+    push.0
+    
+    # => [index]
+    exec.account::get_item
+
+    # => [count]
+    exec.sys::truncate_stack
+end
+
 export.increment_count
     # => []
     push.0
@@ -11,11 +22,10 @@ export.increment_count
     # => [count]
     push.1 add
 
-    # debug statement with client
-    debug.stack
-
     # => [count+1]
     push.0
+
+    debug.stack
 
     # [index, count+1]
     exec.account::set_item
