@@ -117,7 +117,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 2] Building the counter contract");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("./masm/accounts/counter.masm");
+    let file_path = Path::new("../masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
@@ -173,7 +173,7 @@ async fn main() -> Result<(), ClientError> {
     let increment_procedure = "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54";
 
     // Load the MASM script referencing the increment procedure
-    let file_path = Path::new("./masm/scripts/counter_script.masm");
+    let file_path = Path::new("../masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
