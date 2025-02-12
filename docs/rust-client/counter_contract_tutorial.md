@@ -307,7 +307,7 @@ println!(
 );
 println!("contract id: {:?}", counter_contract.id().to_hex());
 
-// Since the counter contract is public and does sign any transactions, auth_secrete_key is not required.
+// Since anyone should be able to write to the counter contract, auth_secret_key is not required.
 // However, to import to the client, we must generate a random value.
 let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -574,7 +574,6 @@ async fn main() -> Result<(), ClientError> {
         counter_contract.hash().to_hex()
     );
     println!("contract id: {:?}", counter_contract.id().to_hex());
-
     println!("account_storage: {:?}", counter_contract.storage());
 
     // Since anyone should be able to write to the counter contract, auth_secret_key is not required.

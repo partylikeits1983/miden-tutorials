@@ -244,7 +244,7 @@ async fn main() -> Result<(), ClientError> {
         count_reader_contract.storage()
     );
 
-    // Since the counter reader contract is public and does not sign any transactions, auth_secret_key is not required.
+    // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -365,7 +365,7 @@ let counter_contract = Account::from_parts(
     counter_nonce,
 );
 
-// Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
+// Since anyone should be able to write to the counter contract, auth_secret_key is not required.
 // However, to import to the client, we must generate a random value.
 let (_, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -599,7 +599,7 @@ async fn main() -> Result<(), ClientError> {
         count_reader_contract.storage()
     );
 
-    // Since the counter reader contract is public and does sign any transactions, auth_secret_key is not required.
+    // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -696,7 +696,7 @@ async fn main() -> Result<(), ClientError> {
         counter_nonce,
     );
 
-    // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
+    // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_, auth_secret_key) = get_new_pk_and_authenticator();
 

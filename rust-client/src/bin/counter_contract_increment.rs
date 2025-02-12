@@ -150,7 +150,7 @@ async fn main() -> Result<(), ClientError> {
         counter_nonce,
     );
 
-    // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
+    // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_, _auth_secret_key) = get_new_pk_and_authenticator();
 
