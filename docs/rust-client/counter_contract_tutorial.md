@@ -719,3 +719,7 @@ To run the full example, navigate to the `rust-client` directory in the [miden-t
 cd rust-client
 cargo run --release --bin counter_contract_deploy
 ```
+
+### Continue learning
+
+Next tutorial: [Interacting with Public Smart Contracts](public_account_interaction_tutorial.md)

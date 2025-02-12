@@ -664,3 +664,7 @@ To run the full example, navigate to the `rust-client` directory in the [miden-t
 cd rust-client
 cargo run --release --bin counter_contract_increment
 ```
+
+### Continue learning
+
+Next tutorial: [Foreign Procedure Invocation](foreign_procedure_invocation_tutorial.md)
