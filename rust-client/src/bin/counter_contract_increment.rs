@@ -18,7 +18,7 @@ use miden_client::{
 use miden_objects::{
     account::{AccountComponent, AccountStorage, AuthSecretKey, StorageSlot},
     assembly::Assembler,
-    crypto::{dsa::rpo_falcon512::SecretKey, hash::rpo::RpoDigest},
+    crypto::dsa::rpo_falcon512::SecretKey,
     Word,
 };
 
@@ -87,9 +87,9 @@ async fn main() -> Result<(), ClientError> {
     println!("Latest block: {}", sync_summary.block_num);
 
     // -------------------------------------------------------------------------
-    // STEP 1: Build Counter Contract From Public State
+    // STEP 1: Read the Public State of the Counter Contract
     // -------------------------------------------------------------------------
-    println!("\n[STEP 1] Building counter contract from public state");
+    println!("\n[STEP 1] Reading data from public state");
 
     // Define the Counter Contract account id from counter contract deploy
     let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
@@ -111,15 +111,20 @@ async fn main() -> Result<(), ClientError> {
     println!("count val: {:?}", count_value.value());
     println!("counter nonce: {:?}", counter_nonce);
 
+    // -------------------------------------------------------------------------
+    // STEP 2: Build the Counter Contract
+    // -------------------------------------------------------------------------
+    println!("\n[STEP 2] Building the counter contract");
+
     // Load the MASM file for the counter contract
-    let file_path = Path::new("../masm/accounts/counter.masm");
+    let file_path = Path::new("./masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
     let assembler: Assembler = TransactionKernel::assembler().with_debug_mode(true);
 
     // Compile the account code into `AccountComponent` with the count value returned by the node
-    let counter_component = AccountComponent::compile(
+    let account_component = AccountComponent::compile(
         account_code,
         assembler,
         vec![StorageSlot::Value(count_value.value())],
@@ -133,7 +138,7 @@ async fn main() -> Result<(), ClientError> {
 
     // Build AccountCode from components
     let account_code = AccountCode::from_components(
-        &[counter_component.clone()],
+        &[account_component],
         AccountType::RegularAccountImmutableCode,
     )
     .unwrap();
@@ -160,52 +165,19 @@ async fn main() -> Result<(), ClientError> {
         .unwrap();
 
     // -------------------------------------------------------------------------
-    // STEP 2: Call the Counter Contract with a script
+    // STEP 3: Call the Counter Contract with a script
     // -------------------------------------------------------------------------
-    println!("\n[STEP 2] Call the increment_count procedure in the counter contract");
+    println!("\n[STEP 3] Call the increment_count procedure in the counter contract");
 
-    // Print procedure root hashes
-    let procedures = counter_contract.code().procedure_roots();
-    let procedures_vec: Vec<RpoDigest> = procedures.collect();
-    for (index, procedure) in procedures_vec.iter().enumerate() {
-        println!("Procedure {}: {:?}", index + 1, procedure.to_hex());
-    }
-    println!("number of procedures: {}", procedures_vec.len());
-
-    /*
-    let names = counter_component.library().exports();
-    println!("names: {:?}", names);
-
-    let names_vec: Vec<QualifiedProcedureName> = names.collect();
-    for(index, procedure) in names.iter().enumerate() {
-      println!("names: {:?}", procedure);
-    }
-    */
-
-    let get_increment_export = counter_component
-        .library()
-        .exports()
-        .find(|export| export.name.as_str() == "increment_count")
-        .unwrap();
-
-    let get_increment_count_mast_id = counter_component
-        .library()
-        .get_export_node_id(get_increment_export);
-
-    let increment_count_root = counter_component
-        .library()
-        .mast_forest()
-        .get_node_by_id(get_increment_count_mast_id)
-        .unwrap()
-        .digest()
-        .to_hex();
+    // The increment_count procedure hash is constant
+    let increment_procedure = "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54";
 
     // Load the MASM script referencing the increment procedure
-    let file_path = Path::new("../masm/scripts/counter_script.masm");
+    let file_path = Path::new("./masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
+    let replaced_code = original_code.replace("{increment_count}", &increment_procedure);
     println!("Final script:\n{}", replaced_code);
 
     // Compile the script

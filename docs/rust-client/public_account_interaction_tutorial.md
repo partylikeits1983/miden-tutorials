@@ -269,7 +269,7 @@ Now that we know the storage state of the counter contract and its nonce, we can
 Add the following code snippet to the end of your `src/main.rs` function:
 ```rust
 // -------------------------------------------------------------------------
-// STEP 2: Build Counter Contract
+// STEP 2: Build the Counter Contract
 // -------------------------------------------------------------------------
 println!("\n[STEP 2] Building the counter contract");
 
