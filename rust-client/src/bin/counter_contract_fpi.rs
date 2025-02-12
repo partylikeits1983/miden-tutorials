@@ -98,12 +98,12 @@ async fn main() -> Result<(), ClientError> {
     let file_path = Path::new("../masm/accounts/count_reader.masm");
     let raw_account_code = fs::read_to_string(file_path).unwrap();
 
-    // Define the counter contract account id and `get_count` procedure root hash
-    let counter_contract_id = AccountId::from_hex("0x87c16e4aeb31cf00000296bc97f065").unwrap();
-    let get_count_root = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
+    // Define the counter contract account id and `get_count` procedure hash
+    let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
+    let get_count_hash = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
 
     let count_reader_code = raw_account_code
-        .replace("{get_count_proc_root}", &get_count_root)
+        .replace("{get_count_proc_hash}", &get_count_hash)
         .replace(
             "{account_id_prefix}",
             &counter_contract_id.prefix().to_string(),
@@ -174,7 +174,7 @@ async fn main() -> Result<(), ClientError> {
         .library()
         .get_export_node_id(get_proc_export);
 
-    let copy_count_proc_root = count_reader_component
+    let copy_count_proc_hash = count_reader_component
         .library()
         .mast_forest()
         .get_node_by_id(get_proc_mast_id)
@@ -182,7 +182,7 @@ async fn main() -> Result<(), ClientError> {
         .digest()
         .to_hex();
 
-    println!("copy_count procedure root: {:?}", copy_count_proc_root);
+    println!("copy_count procedure hash: {:?}", copy_count_proc_hash);
 
     // -------------------------------------------------------------------------
     // STEP 2: Build & Get State of the Counter Contract
@@ -265,7 +265,7 @@ async fn main() -> Result<(), ClientError> {
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace {get_count} and {account_id}
-    let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_root);
+    let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_hash);
 
     // Compile the script referencing our procedure
     let tx_script = client.compile_tx_script(vec![], &replaced_code).unwrap();

@@ -4,15 +4,15 @@ use.std::sys
 
 export.copy_count
   # => []
-  push.{get_count_proc_root}
+  push.{get_count_proc_hash}
 
-  # => [GET_COUNT_ROOT]
+  # => [GET_COUNT_HASH]
   push.{account_id_suffix}
 
   # => [account_id_suffix]
   push.{account_id_prefix}
 
-  # => [account_id_prefix, account_id_suffix, GET_COUNT_ROOT]
+  # => [account_id_prefix, account_id_suffix, GET_COUNT_HASH]
   exec.tx::execute_foreign_procedure
 
   # => [count]

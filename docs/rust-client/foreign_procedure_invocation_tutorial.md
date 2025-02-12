@@ -21,11 +21,11 @@ FPI is useful for developing smart contracts that extend the functionality of ex
 
 ## Prerequisites
 
-This tutorial assumes you have a basic understanding of Miden assembly and completed the previous tutorial on deploying the counter contract. We will be working within the same `miden-counter-contract` repository that we created in the [Interacting with Public Smart Contracts](./public_account_interaction_tutorial.md) tutorial. 
+This tutorial assumes you have a basic understanding of Miden assembly and completed the previous tutorial on deploying the counter contract. We will be working within the same `miden-counter-contract` repository that we created in the [Interacting with Public Smart Contracts](./public_account_interaction_tutorial.md) tutorial.
 
 ## Step 1: Set up your repository
 
-We will be using the same repository used in the "Interacting with Public Smart Contracts" tutorial. To set up your repository for this tutorial, first follow the steps [here](./public_account_interaction_tutorial.md).
+We will be using the same repository used in the "Interacting with Public Smart Contracts" tutorial. To set up your repository for this tutorial, first follow up until step two [here](./public_account_interaction_tutorial.md).
 
 ## Step 2: Set up the "count reader" contract
 
@@ -42,15 +42,15 @@ use.std::sys
 # and then copies the value to storage
 export.copy_count
   # => []
-  push.{get_count_proc_root}
+  push.{get_count_proc_hash}
 
-  # => [GET_COUNT_ROOT]
+  # => [GET_COUNT_HASH]
   push.{account_id_suffix}
 
   # => [account_id_suffix]
   push.{account_id_prefix}
 
-  # => [account_id_prefix, account_id_suffix, GET_COUNT_ROOT]
+  # => [account_id_prefix, account_id_suffix, GET_COUNT_HASH]
   exec.tx::execute_foreign_procedure
 
   # => [count]
@@ -72,12 +72,12 @@ end
 
 In the count reader smart contract we have a `copy_count` procedure that uses `tx::execute_foreign_procedure` to call the `get_count` procedure in the counter contract. 
 
-To call the `get_count` procedure, we push its root hash along with the counter contract's ID suffix and prefix.
+To call the `get_count` procedure, we push its hash along with the counter contract's ID suffix and prefix.
 
 This is what the stack state should look like before we call `tx::execute_foreign_procedure`:
 
 ```
-# => [account_id_prefix, account_id_suffix, GET_COUNT_ROOT]
+# => [account_id_prefix, account_id_suffix, GET_COUNT_HASH]
 ```
 
 After calling the `get_count` procedure in the counter contract, we call `debug.stack` and then save the count of the counter contract to index 0 in storage.
@@ -193,12 +193,12 @@ async fn main() -> Result<(), ClientError> {
     let file_path = Path::new("../masm/accounts/count_reader.masm");
     let raw_account_code = fs::read_to_string(file_path).unwrap();
 
-    // Define the counter contract account id and `get_count` procedure root hash
-    let counter_contract_id = AccountId::from_hex("0x87c16e4aeb31cf00000296bc97f065").unwrap();
-    let get_count_root = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
+    // Define the counter contract account id and `get_count` procedure hash
+    let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
+    let get_count_hash = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
 
     let count_reader_code = raw_account_code
-        .replace("{get_count_proc_root}", &get_count_root)
+        .replace("{get_count_proc_hash}", &get_count_hash)
         .replace(
             "{account_id_prefix}",
             &counter_contract_id.prefix().to_string(),
@@ -258,7 +258,7 @@ async fn main() -> Result<(), ClientError> {
         .await
         .unwrap();
 
-    // Getting the root hash of the `copy_count` procedure
+    // Getting the hash of the `copy_count` procedure
     let get_proc_export = count_reader_component
         .library()
         .exports()
@@ -269,7 +269,7 @@ async fn main() -> Result<(), ClientError> {
         .library()
         .get_export_node_id(get_proc_export);
 
-    let copy_count_proc_root = count_reader_component
+    let copy_count_proc_hash = count_reader_component
         .library()
         .mast_forest()
         .get_node_by_id(get_proc_mast_id)
@@ -277,7 +277,7 @@ async fn main() -> Result<(), ClientError> {
         .digest()
         .to_hex();
 
-    println!("copy_count procedure root: {:?}", copy_count_proc_root);
+    println!("copy_count procedure hash: {:?}", copy_count_proc_hash);
     Ok(())
 }
 ```
@@ -295,7 +295,7 @@ Latest block: 8196
 [STEP 1] Creating count reader contract.
 count reader contract id: "0xaaadff3d878c700000001e1678f525"
 count reader  storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
-copy_count procedure root: "0x46da263bc780d329125b78889618c93cd5a56c2f217c672c90bfd21718f55dcc"
+copy_count procedure hash: "0x46da263bc780d329125b78889618c93cd5a56c2f217c672c90bfd21718f55dcc"
 ```
 
 ## Step 4: Build and read the state of the counter contract deployed on testnet
@@ -392,7 +392,7 @@ let file_path = Path::new("../masm/scripts/reader_script.masm");
 let original_code = fs::read_to_string(file_path).unwrap();
 
 // Replace {get_count} and {account_id}
-let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_root);
+let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_hash);
 
 // Compile the script referencing our procedure
 let tx_script = client.compile_tx_script(vec![], &replaced_code).unwrap();
@@ -548,12 +548,12 @@ async fn main() -> Result<(), ClientError> {
     let file_path = Path::new("../masm/accounts/count_reader.masm");
     let raw_account_code = fs::read_to_string(file_path).unwrap();
 
-    // Define the counter contract account id and `get_count` procedure root hash
-    let counter_contract_id = AccountId::from_hex("0x87c16e4aeb31cf00000296bc97f065").unwrap();
-    let get_count_root = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
+    // Define the counter contract account id and `get_count` procedure hash
+    let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
+    let get_count_hash = "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6";
 
     let count_reader_code = raw_account_code
-        .replace("{get_count_proc_root}", &get_count_root)
+        .replace("{get_count_proc_hash}", &get_count_hash)
         .replace(
             "{account_id_prefix}",
             &counter_contract_id.prefix().to_string(),
@@ -613,7 +613,7 @@ async fn main() -> Result<(), ClientError> {
         .await
         .unwrap();
 
-    // Getting the root hash of the `copy_count` procedure
+    // Getting the hash of the `copy_count` procedure
     let get_proc_export = count_reader_component
         .library()
         .exports()
@@ -624,7 +624,7 @@ async fn main() -> Result<(), ClientError> {
         .library()
         .get_export_node_id(get_proc_export);
 
-    let copy_count_proc_root = count_reader_component
+    let copy_count_proc_hash = count_reader_component
         .library()
         .mast_forest()
         .get_node_by_id(get_proc_mast_id)
@@ -632,7 +632,7 @@ async fn main() -> Result<(), ClientError> {
         .digest()
         .to_hex();
 
-    println!("copy_count procedure root: {:?}", copy_count_proc_root);
+    println!("copy_count procedure hash: {:?}", copy_count_proc_hash);
 
     // -------------------------------------------------------------------------
     // STEP 2: Build & Get State of the Counter Contract
@@ -715,7 +715,7 @@ async fn main() -> Result<(), ClientError> {
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace {get_count} and {account_id}
-    let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_root);
+    let replaced_code = original_code.replace("{copy_count}", &copy_count_proc_hash);
 
     // Compile the script referencing our procedure
     let tx_script = client.compile_tx_script(vec![], &replaced_code).unwrap();
@@ -773,20 +773,20 @@ The output of our program will look something like this:
 
 ```
 Client initialized successfully.
-Latest block: 8446
+Latest block: 242367
 
 [STEP 1] Creating count reader contract.
-count reader contract id: "0x6f28dcbd8d8654000000cc6e61a9c7"
+count reader contract id: "0x95b00b4f410f5000000383ca114c9a"
 count reader  storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
-copy_count procedure root: "0x46da263bc780d329125b78889618c93cd5a56c2f217c672c90bfd21718f55dcc"
+copy_count procedure hash: "0xa2ab9f6a150e9c598699741187589d0c61de12c35c1bbe591d658950f44ab743"
 
 [STEP 2] Building counter contract from public state
-count val: [0, 0, 0, 3]
-counter nonce: 3
+count val: [0, 0, 0, 2]
+counter nonce: 2
 
 [STEP 3] Call Counter Contract with FPI from Count Copy Contract
-Stack state before step 3437:
-├──  0: 3
+Stack state before step 3351:
+├──  0: 2
 ├──  1: 0
 ├──  2: 0
 ├──  3: 0
@@ -803,9 +803,9 @@ Stack state before step 3437:
 ├── 14: 0
 └── 15: 0
 
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0x3f4be02de4882660897c3da0b14419da4ee048488c74e31944f528bfc770397f
-counter contract storage: Ok(RpoDigest([0, 0, 0, 3]))
-count reader contract storage: Ok(RpoDigest([0, 0, 0, 3]))
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0xe2fdb53926e7a11548863c2a85d81127094d6fe38f60509b4ef8ea38994f8cec
+counter contract storage: Ok(RpoDigest([0, 0, 0, 2]))
+count reader contract storage: Ok(RpoDigest([0, 0, 0, 2]))
 ```
 
 ### Running the example

@@ -22,10 +22,11 @@ export.increment_count
     # => [count]
     push.1 add
 
+    # debug statement with client
+    debug.stack
+
     # => [count+1]
     push.0
-
-    debug.stack
 
     # [index, count+1]
     exec.account::set_item

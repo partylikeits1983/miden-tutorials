@@ -148,7 +148,7 @@ async fn main() -> Result<(), ClientError> {
         .await
         .unwrap();
 
-    // Print the procedure root hash
+    // Print the procedure hash
     let get_increment_export = counter_component
         .library()
         .exports()
@@ -159,7 +159,7 @@ async fn main() -> Result<(), ClientError> {
         .library()
         .get_export_node_id(get_increment_export);
 
-    let increment_count_root = counter_component
+    let increment_count_hash = counter_component
         .library()
         .mast_forest()
         .get_node_by_id(get_increment_count_mast_id)
@@ -167,7 +167,7 @@ async fn main() -> Result<(), ClientError> {
         .digest()
         .to_hex();
 
-    println!("increment_count procedure root: {:?}", increment_count_root);
+    println!("increment_count procedure hash: {:?}", increment_count_hash);
 
     // -------------------------------------------------------------------------
     // STEP 2: Call the Counter Contract with a script
@@ -179,7 +179,7 @@ async fn main() -> Result<(), ClientError> {
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
+    let replaced_code = original_code.replace("{increment_count}", &increment_count_hash);
     println!("Final script:\n{}", replaced_code);
 
     // Compile the script referencing our procedure
