@@ -126,7 +126,11 @@ use miden_objects::{
 
 pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     // RPC endpoint and timeout
-    let endpoint = Endpoint::new("http".to_string(), "localhost".to_string(), Some(57291));
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.testnet.miden.io".to_string(),
+        Some(443),
+    );
     let timeout_ms = 10_000;
 
     // Build RPC client
@@ -190,7 +194,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Creating count reader contract.");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("../masm/accounts/count_reader.masm");
+    let file_path = Path::new("./masm/accounts/count_reader.masm");
     let raw_account_code = fs::read_to_string(file_path).unwrap();
 
     // Define the counter contract account id and `get_count` procedure hash
@@ -290,12 +294,12 @@ cargo run --release
 The output of our program will look something like this:
 ```
 Client initialized successfully.
-Latest block: 8196
+Latest block: 243826
 
 [STEP 1] Creating count reader contract.
-count reader contract id: "0xaaadff3d878c700000001e1678f525"
+count reader contract id: "0xa47d7e5d8b1b90000003cd45a45a78"
 count reader  storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
-copy_count procedure hash: "0x46da263bc780d329125b78889618c93cd5a56c2f217c672c90bfd21718f55dcc"
+copy_count procedure hash: "0xa2ab9f6a150e9c598699741187589d0c61de12c35c1bbe591d658950f44ab743"
 ```
 
 ## Step 4: Build and read the state of the counter contract deployed on testnet
@@ -327,7 +331,7 @@ println!("count val: {:?}", count_value.value());
 println!("counter nonce: {:?}", counter_nonce);
 
 // Load the MASM file for the counter contract
-let file_path = Path::new("../masm/accounts/counter.masm");
+let file_path = Path::new("./masm/accounts/counter.masm");
 let account_code = fs::read_to_string(file_path).unwrap();
 
 // Prepare assembler (debug mode = true)
@@ -388,7 +392,7 @@ Add this snippet to the end of your file in the `main()` function:
 println!("\n[STEP 3] Call Counter Contract with FPI from Count Copy Contract");
 
 // Load the MASM script referencing the increment procedure
-let file_path = Path::new("../masm/scripts/reader_script.masm");
+let file_path = Path::new("./masm/scripts/reader_script.masm");
 let original_code = fs::read_to_string(file_path).unwrap();
 
 // Replace {get_count} and {account_id}
@@ -481,7 +485,11 @@ use miden_objects::{
 
 pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     // RPC endpoint and timeout
-    let endpoint = Endpoint::new("http".to_string(), "localhost".to_string(), Some(57291));
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.testnet.miden.io".to_string(),
+        Some(443),
+    );
     let timeout_ms = 10_000;
 
     // Build RPC client
@@ -545,7 +553,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Creating count reader contract.");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("../masm/accounts/count_reader.masm");
+    let file_path = Path::new("./masm/accounts/count_reader.masm");
     let raw_account_code = fs::read_to_string(file_path).unwrap();
 
     // Define the counter contract account id and `get_count` procedure hash
@@ -658,7 +666,7 @@ async fn main() -> Result<(), ClientError> {
     println!("counter nonce: {:?}", counter_nonce);
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("../masm/accounts/counter.masm");
+    let file_path = Path::new("./masm/accounts/counter.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
@@ -711,7 +719,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 3] Call Counter Contract with FPI from Count Copy Contract");
 
     // Load the MASM script referencing the increment procedure
-    let file_path = Path::new("../masm/scripts/reader_script.masm");
+    let file_path = Path::new("./masm/scripts/reader_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace {get_count} and {account_id}
