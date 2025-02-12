@@ -6,17 +6,16 @@ use rand_chacha::ChaCha20Rng;
 use tokio::time::Duration;
 
 use miden_client::{
-    account::{Account, AccountCode, AccountId, AccountType},
-    asset::AssetVault,
+    account::{AccountStorageMode, AccountType},
     crypto::RpoRandomCoin,
-    rpc::{domain::account::AccountDetails, Endpoint, TonicRpcClient},
+    rpc::{Endpoint, TonicRpcClient},
     store::{sqlite_store::SqliteStore, StoreAuthenticator},
     transaction::{TransactionKernel, TransactionRequestBuilder},
     Client, ClientError, Felt,
 };
 
 use miden_objects::{
-    account::{AccountComponent, AccountStorage, AuthSecretKey, StorageSlot},
+    account::{AccountBuilder, AccountComponent, AuthSecretKey, StorageSlot},
     assembly::Assembler,
     crypto::dsa::rpo_falcon512::SecretKey,
     Word,
@@ -87,29 +86,9 @@ async fn main() -> Result<(), ClientError> {
     println!("Latest block: {}", sync_summary.block_num);
 
     // -------------------------------------------------------------------------
-    // STEP 1: Build Counter Contract From Public State
+    // STEP 1: Create a basic counter contract
     // -------------------------------------------------------------------------
-    println!("\n[STEP 1] Building counter contract from public state");
-
-    // Define the Counter Contract account id from counter contract deploy
-    let counter_contract_id = AccountId::from_hex("0x303dd027d27adc0000012b07dbf1b4").unwrap();
-
-    let account_details = client
-        .test_rpc_api()
-        .get_account_update(counter_contract_id)
-        .await
-        .unwrap();
-
-    let AccountDetails::Public(counter_contract_details, _) = account_details else {
-        panic!("counter contract must be public");
-    };
-
-    // Getting the value of the count from slot 0 and the nonce of the counter contract
-    let count_value = counter_contract_details.storage().slots().get(0).unwrap();
-    let counter_nonce = counter_contract_details.nonce();
-
-    println!("count val: {:?}", count_value.value());
-    println!("counter nonce: {:?}", counter_nonce);
+    println!("\n[STEP 1] Creating counter contract.");
 
     // Load the MASM file for the counter contract
     let file_path = Path::new("../masm/accounts/counter.masm");
@@ -118,64 +97,92 @@ async fn main() -> Result<(), ClientError> {
     // Prepare assembler (debug mode = true)
     let assembler: Assembler = TransactionKernel::assembler().with_debug_mode(true);
 
-    // Compile the account code into `AccountComponent` with the count value returned by the node
-    let account_component = AccountComponent::compile(
+    // Compile the account code into `AccountComponent` with one storage slot
+    let counter_component = AccountComponent::compile(
         account_code,
         assembler,
-        vec![StorageSlot::Value(count_value.value())],
+        vec![StorageSlot::Value([
+            Felt::new(0),
+            Felt::new(0),
+            Felt::new(0),
+            Felt::new(0),
+        ])],
     )
     .unwrap()
     .with_supports_all_types();
 
-    // Initialize the AccountStorage with the count value returned by the node
-    let account_storage =
-        AccountStorage::new(vec![StorageSlot::Value(count_value.value())]).unwrap();
+    // Init seed for the counter contract
+    let init_seed = ChaCha20Rng::from_entropy().gen();
 
-    // Build AccountCode from components
-    let account_code = AccountCode::from_components(
-        &[account_component],
-        AccountType::RegularAccountImmutableCode,
-    )
-    .unwrap();
+    // Anchor block of the account
+    let anchor_block = client.get_latest_epoch_block().await.unwrap();
 
-    // The counter contract doesn't have any assets so we pass an empty vector
-    let vault = AssetVault::new(&[]).unwrap();
+    // Build the new `Account` with the component
+    let (counter_contract, counter_seed) = AccountBuilder::new(init_seed)
+        .anchor((&anchor_block).try_into().unwrap())
+        .account_type(AccountType::RegularAccountImmutableCode)
+        .storage_mode(AccountStorageMode::Public)
+        .with_component(counter_component.clone())
+        .build()
+        .unwrap();
 
-    // Build the counter contract from parts
-    let counter_contract = Account::from_parts(
-        counter_contract_id,
-        vault,
-        account_storage,
-        account_code,
-        counter_nonce,
+    println!(
+        "counter_contract hash: {:?}",
+        counter_contract.hash().to_hex()
     );
+    println!("contract id: {:?}", counter_contract.id().to_hex());
+
+    println!("account_storage: {:?}", counter_contract.storage());
 
     // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
-    let (_, _auth_secret_key) = get_new_pk_and_authenticator();
+    let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
     client
-        .add_account(&counter_contract.clone(), None, &_auth_secret_key, true)
+        .add_account(
+            &counter_contract.clone(),
+            Some(counter_seed),
+            &auth_secret_key,
+            false,
+        )
         .await
         .unwrap();
+
+    // Print the procedure root hash
+    let get_increment_export = counter_component
+        .library()
+        .exports()
+        .find(|export| export.name.as_str() == "increment_count")
+        .unwrap();
+
+    let get_increment_count_mast_id = counter_component
+        .library()
+        .get_export_node_id(get_increment_export);
+
+    let increment_count_root = counter_component
+        .library()
+        .mast_forest()
+        .get_node_by_id(get_increment_count_mast_id)
+        .unwrap()
+        .digest()
+        .to_hex();
+
+    println!("increment_count procedure root: {:?}", increment_count_root);
 
     // -------------------------------------------------------------------------
     // STEP 2: Call the Counter Contract with a script
     // -------------------------------------------------------------------------
-    println!("\n[STEP 2] Call the increment_count procedure in the counter contract");
-
-    // The increment_count procedure hash is constant
-    let increment_procedure = "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54";
+    println!("\n[STEP 2] Call Counter Contract With Script");
 
     // Load the MASM script referencing the increment procedure
     let file_path = Path::new("../masm/scripts/counter_script.masm");
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &increment_procedure);
+    let replaced_code = original_code.replace("{increment_count}", &increment_count_root);
     println!("Final script:\n{}", replaced_code);
 
-    // Compile the script
+    // Compile the script referencing our procedure
     let tx_script = client.compile_tx_script(vec![], &replaced_code).unwrap();
 
     // Build a transaction request with the custom script
