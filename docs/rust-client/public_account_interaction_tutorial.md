@@ -4,14 +4,16 @@
 
 ## Overview
 
-In the previous tutorial, we built a simple counter contract and deployed it to the Miden testnet. However, we only covered how the deployer of a smart contract could interact with the smart contract they deployed. In this tutorial, we will cover how anyone can interact with a public smart contract on Miden.
+In the previous tutorial, we built a simple counter contract and deployed it to the Miden testnet. However, we only covered how the contract’s deployer could interact with it. Now, let’s explore how anyone can interact with a public smart contract on Miden.
+
+We’ll retrieve the counter contract’s state from the chain and rebuild it locally so a local transaction can be executed against it. In the near future, Miden will support network transactions, making the process of submitting transactions to public smart contracts much more like traditional blockchains.
 
 Just like in the previous tutorial, we will use a script to invoke the increment function within the counter contract to update the count. However, this tutorial demonstrates how to call a procedure in a smart contract that was deployed by a different user on Miden.
 
 ## What we'll cover
 
-- Interacting with public smart contracts on Miden
 - Reading state from a public smart contract
+- Interacting with public smart contracts on Miden
 
 ## Prerequisites
 
@@ -66,6 +68,17 @@ Inside of the `masm/accounts/` directory, create the `counter.masm` file:
 ```masm
 use.miden::account
 use.std::sys
+
+export.get_count
+    # => []
+    push.0
+    
+    # => [index]
+    exec.account::get_item
+
+    # => [count]
+    exec.sys::truncate_stack
+end
 
 export.increment_count
     # => []
@@ -217,7 +230,7 @@ Add the following code snippet to the end of your `src/main.rs` function:
 println!("\n[STEP 1] Reading data from public state");
 
 // Define the AccountId of the account to read from
-let counter_contract_id = AccountId::from_hex("0x303dd027d27adc0000012b07dbf1b4").unwrap();
+let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
 
 let account_details = client
     .test_rpc_api()
@@ -251,12 +264,12 @@ counter nonce: 5
 
 ## Step 5: Building an account from parts
 
-Now that we know the storage state of the counter contract and its nonce, we can build the account from its parts. We know the account id, asset vault value, the storage layout, account code, and nonce. From these values, we can build the counter contract from scratch.
+Now that we know the storage state of the counter contract and its nonce, we can build the account from its parts. We know the account ID, asset vault value, the storage layout, account code, and nonce. We need the full account data to interact with it locally. From these values, we can build the counter contract from scratch.
 
 Add the following code snippet to the end of your `src/main.rs` function:
 ```rust
 // -------------------------------------------------------------------------
-// STEP 2: Build Counter Contract
+// STEP 2: Build the Counter Contract
 // -------------------------------------------------------------------------
 println!("\n[STEP 2] Building the counter contract");
 
@@ -299,7 +312,7 @@ let counter_contract = Account::from_parts(
     counter_nonce,
 );
 
-// Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
+// Since anyone should be able to write to the counter contract, auth_secret_key is not required.
 // However, to import to the client, we must generate a random value.
 let (_, _auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -466,7 +479,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Reading data from public state");
 
     // Define the Counter Contract account id from counter contract deploy
-    let counter_contract_id = AccountId::from_hex("0x303dd027d27adc0000012b07dbf1b4").unwrap();
+    let counter_contract_id = AccountId::from_hex("0x4eedb9db1bdcf90000036bcebfe53a").unwrap();
 
     let account_details = client
         .test_rpc_api()
@@ -529,7 +542,7 @@ async fn main() -> Result<(), ClientError> {
         counter_nonce,
     );
 
-    // Since the counter contract is public and does sign any transactions, auth_secret_key is not required.
+    // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
     // However, to import to the client, we must generate a random value.
     let (_, _auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -602,22 +615,23 @@ The output of our program will look something like this depending on the current
 
 ```
 Client initialized successfully.
-Latest block: 84771
+Latest block: 242342
 
-[STEP 1] Reading data from public state
-count val: [0, 0, 0, 6]
-counter nonce: 6
+[STEP 1] Building counter contract from public state
+count val: [0, 0, 0, 1]
+counter nonce: 1
 
-[STEP 2] Building the counter contract
-
-[STEP 3] Call the increment_count procedure in the counter contract
+[STEP 2] Call the increment_count procedure in the counter contract
+Procedure 1: "0x92495ca54d519eb5e4ba22350f837904d3895e48d74d8079450f19574bb84cb6"
+Procedure 2: "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54"
+number of procedures: 2
 Final script:
 begin
     # => []
     call.0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54
 end
-Stack state before step 1888:
-├──  0: 7
+Stack state before step 1812:
+├──  0: 2
 ├──  1: 0
 ├──  2: 0
 ├──  3: 0
@@ -638,8 +652,8 @@ Stack state before step 1888:
 ├── 18: 0
 └── 19: 0
 
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0xb8cb4069880db3af6d0ae72dacc1bf55048e63f6d3856b6ea2cb832ce8225b34
-counter contract storage: Ok(RpoDigest([0, 0, 0, 7]))
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0x8183aed150f20b9c26d4cb7840bfc92571ea45ece31116170b11cdff2649eb5c
+counter contract storage: Ok(RpoDigest([0, 0, 0, 2]))
 ```
 
 ### Running the example

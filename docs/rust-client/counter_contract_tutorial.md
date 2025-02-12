@@ -163,7 +163,7 @@ masm/
 
 ### Custom Miden smart contract
 
-Below is our counter contract. It has a single exported procedure `increment_count`.
+Below is our counter contract. It has a two exported procedures: `get_count` and `increment_count`.
 
 At the beginning of the MASM file, we define our imports. In this case, we import `miden::account` and `std::sys`.
 
@@ -171,7 +171,14 @@ The import `miden::account` contains useful procedures for interacting with a sm
 
 The import `std::sys` contains a useful procedure for truncating the operand stack at the end of a procedure.
 
-Here's a breakdown of what the `increment_count` procedure does:
+#### Here's a breakdown of what the `get_count` procedure does:
+
+1. Pushes `0` onto the stack, representing the index of the storage slot to read.
+2. Calls `account::get_item` with the index of `0`.
+3. Calls `sys::truncate_stack` to truncate the stack to size 16.
+4. The value returned from `account::get_item` is still on the stack and will be returned when this procedure is called.
+
+#### Here's a breakdown of what the `increment_count` procedure does:
 
 1. Pushes `0` onto the stack, representing the index of the storage slot to read.
 2. Calls `account::get_item` with the index of `0`.
@@ -187,6 +194,17 @@ Inside of the `masm/accounts/` directory, create the `counter.masm` file:
 ```masm
 use.miden::account
 use.std::sys
+
+export.get_count
+    # => []
+    push.0
+    
+    # => [index]
+    exec.account::get_item
+
+    # => [count]
+    exec.sys::truncate_stack
+end
 
 export.increment_count
     # => []
@@ -289,7 +307,7 @@ println!(
 );
 println!("contract id: {:?}", counter_contract.id().to_hex());
 
-// Since the counter contract is public and does sign any transactions, auth_secrete_key is not required.
+// Since anyone should be able to write to the counter contract, auth_secret_key is not required.
 // However, to import to the client, we must generate a random value.
 let (_counter_pub_key, auth_secret_key) = get_new_pk_and_authenticator();
 
@@ -556,7 +574,6 @@ async fn main() -> Result<(), ClientError> {
         counter_contract.hash().to_hex()
     );
     println!("contract id: {:?}", counter_contract.id().to_hex());
-
     println!("account_storage: {:?}", counter_contract.storage());
 
     // Since anyone should be able to write to the counter contract, auth_secret_key is not required.
@@ -653,8 +670,8 @@ Client initialized successfully.
 Latest block: 118178
 
 [STEP 1] Creating counter contract.
-counter_contract hash: "0x07fcd02b0e63e09d4b618391bef24e0fab6f675bc3824bc181389e9d27fc8855"
-contract id: "0x42ef7fd55b9a20000001822c108db1"
+counter_contract hash: "0xa1802c8cfba2bd9c1c0f0b10b875795445566bd61864a05103bdaff167775293"
+contract id: "0x4eedb9db1bdcf90000036bcebfe53a"
 account_storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
 increment_count procedure hash: "0xecd7eb223a5524af0cc78580d96357b298bb0b3d33fe95aeb175d6dab9de2e54"
 
@@ -686,7 +703,7 @@ Stack state before step 2384:
 ├── 18: 0
 └── 19: 0
 
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0x30585bbdbbdb8fe481b01659526746e52ae26c22c060d7a7ce232fa30c90b04c
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0x4384619bba7e6c959a31769a52ce8c6c081ffab00be33e85f58f62cccfd32c21
 counter contract storage: Ok(RpoDigest([0, 0, 0, 1]))
 ```
 
