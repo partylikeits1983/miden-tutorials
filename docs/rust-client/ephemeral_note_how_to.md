@@ -1,10 +1,10 @@
-# Leveraging Ephemeral Notes for Fast Transaction Settlement
+# How to Use Ephemeral Notes 
 
 ## Overview
 
-In this guide, we will explore how to leverage ephemeral notes on Miden to settle transactions faster than the standard blocktime of 5 seconds. Ephemeral notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows them to be created and consumed within the same block, enabling rapid asset transfers. On a MacBook M4 chip, for example, these transactions can be processed in around 2 seconds. 
+In this guide, we will explore how to leverage ephemeral notes on Miden to settle transactions faster than the standard blocktime of 5 seconds. Ephemeral notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows the notes to be created and consumed within the same block by different accounts.
 
-In this guide, we construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes—also known as "unauthenticated notes", enable rapid note creation and consumption. We also show how a note can be serialized and deserialized, which demonstrates the possibility of transferring notes between client instances for extremely fast settlement.
+In this guide, we construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime. 
 
 For example, our demo creates a circle of ephemeral note transactions:
 
@@ -15,7 +15,7 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
 ## What We'll Cover
 
 - **Introduction to Ephemeral Notes:** Understand what ephemeral notes are and how they differ from standard notes.
-- **Serialization Example:** See how to serialize and deserialize a note to simulate rapid asset transfers.
+- **Serialization Example:** See how to serialize and deserialize a note to demonstrate how notes can be propagated to client instances faster than the blocktime.
 - **Performance Insights:** Observe how ephemeral notes can reduce transaction times dramatically.
 
 ## Step-by-Step Process
@@ -443,10 +443,10 @@ Account: 0xac0e06f781ac2d1000067663c3aadf balance: 20
 
 Ephemeral notes on Miden offer a powerful mechanism for achieving faster asset settlements by allowing notes to be both created and consumed within the same block. In this guide, we walked through:
 
-- **Minting and Transacting with Ephemeral Notes:** Building, serializing, and consuming notes quickly using the "unauthenticated" method.
-- **Performance Observations:** Measuring and demonstrating the rapid transaction processing enabled by ephemeral notes.
+- **Minting and Transacting with Ephemeral Notes:** Building, serializing, and consuming notes quickly using the Miden client's "unauthenticated note" method.
+- **Performance Observations:** Measuring and demonstrating how ephemeral notes enable assets to be sent faster than the blocktime.
 
-By following this guide, you should now have a clear understanding of how to build and deploy high-performance transactions using ephemeral notes on Miden—an ideal approach for applications like central limit order books or other DeFi platforms where transaction speed is critical.
+By following this guide, you should now have a clear understanding of how to build and deploy high-performance transactions using ephemeral notes on Miden. Ephemeral notes are the ideal approach for applications like central limit order books (CLOBs) or other DeFi platforms where transaction speed is critical.
 
 ### Running the example
 
