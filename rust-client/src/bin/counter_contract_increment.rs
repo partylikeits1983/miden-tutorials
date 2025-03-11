@@ -51,7 +51,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     let arc_store = Arc::new(store);
 
     // Create authenticator referencing the store and RNG
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng.clone());
+    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
 
     // Instantiate client (toggle debug mode as needed)
     let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
@@ -105,7 +105,7 @@ async fn main() -> Result<(), ClientError> {
     };
 
     // Getting the value of the count from slot 0 and the nonce of the counter contract
-    let count_value = counter_contract_details.storage().slots().get(0).unwrap();
+    let count_value = counter_contract_details.storage().slots().first().unwrap();
     let counter_nonce = counter_contract_details.nonce();
 
     println!("count val: {:?}", count_value.value());
@@ -177,7 +177,8 @@ async fn main() -> Result<(), ClientError> {
     let original_code = fs::read_to_string(file_path).unwrap();
 
     // Replace the placeholder with the actual procedure call
-    let replaced_code = original_code.replace("{increment_count}", &increment_procedure);
+
+    let replaced_code = original_code.replace("{increment_count}", increment_procedure);
     println!("Final script:\n{}", replaced_code);
 
     // Compile the script

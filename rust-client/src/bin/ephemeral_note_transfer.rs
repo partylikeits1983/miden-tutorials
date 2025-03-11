@@ -42,7 +42,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
         .await
         .map_err(ClientError::StoreError)?;
     let arc_store = Arc::new(store);
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng.clone());
+    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
 
     let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
     Ok(client)
@@ -157,7 +157,7 @@ async fn main() -> Result<(), ClientError> {
     let amount: u64 = 100;
     let fungible_asset_mint_amount = FungibleAsset::new(faucet_account.id(), amount).unwrap();
     let transaction_request = TransactionRequestBuilder::mint_fungible_asset(
-        fungible_asset_mint_amount.clone(),
+        fungible_asset_mint_amount,
         alice.id(),
         NoteType::Public,
         client.rng(),

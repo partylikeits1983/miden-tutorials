@@ -11,12 +11,12 @@ At a high level, this example involves:
 - Using Rust code to deploy the account and submit a transaction that updates the mapping.  
 After the Miden Assembly snippets, we explain that the transaction script calls a procedure in the account. This procedure then updates the mapping by modifying the mapping stored in the account's storage slot.
 
-## What We'll Cover
+## What we'll cover
 
 - **How to Use Mappings in Miden Assembly:** See how to create a smart contract that uses a mapping.
 - **How to Link Libraries in Miden Assembly:** Demonstrate how to link procedures across Accounts, Notes, and Scripts.
 
-## Step-by-Step Process
+## Step-by-step process
 
 1. **Setting up an account with a mapping**  
    In this step, you create an account that has a storage slot configured as a mapping. The account smart contract code (shown below) defines procedures to write to and read from this mapping.
@@ -29,7 +29,7 @@ After the Miden Assembly snippets, we explain that the transaction script calls 
 
 ---
 
-### Example of Smart Contract that Uses a Mapping
+### Example of smart contract that uses a mapping
 
 ```masm
 use.miden::account
@@ -77,7 +77,7 @@ export.get_current_map_root
 end
 ```
 
-### Explanation of the Assembly Code
+### Explanation of the assembly code
 
 - **write_to_map:**  
   The procedure takes a key and a value as inputs. It pushes the storage index (`0` for our mapping) onto the stack, then calls the `set_map_item` procedure from the account library to update the mapping. After updating the map, it drops any unused outputs and increments the nonce.
@@ -90,7 +90,7 @@ end
 
 **Security Note**: The procedure `write_to_map` calls the account procedure `incr_nonce`. This allows any external account to be able to write to the storage map of the account. Smart contract developers should know that procedures that call the `account::incr_nonce` procedure allow anyone to call the procedure and modify the state of the account.
 
-### Transaction Script that Calls the Smart Contract
+### Transaction script that calls the smart contract
 
 ```masm
 use.miden_by_example::mapping_example_contract
@@ -120,7 +120,7 @@ begin
 end
 ```
 
-### Explanation of the Transaction Script
+### Explanation of the transaction script
 
 The transaction script does the following:
 - It pushes a key (`[0.0.0.0]`) and a value (`[1.2.3.4]`) onto the stack.
@@ -132,7 +132,7 @@ The script calls the `write_to_map` procedure in the account which writes the ke
 
 ---
 
-### Rust Code that Sets Everything Up
+### Rust code that sets everything up
 
 Below is the Rust code that deploys the smart contract, creates the transaction script, and submits a transaction to update the mapping in the account:
 
@@ -194,7 +194,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     let arc_store = Arc::new(store);
 
     // Create authenticator referencing the store and RNG
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng.clone());
+    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
 
     // Instantiate client (toggle debug mode as needed)
     let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
@@ -261,7 +261,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Deploy a smart contract with a mapping");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("../masm/accounts/mapping_example_contract.masm");
+    let file_path = Path::new("./masm/accounts/mapping_example_contract.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
@@ -303,7 +303,7 @@ async fn main() -> Result<(), ClientError> {
 
     client
         .add_account(
-            &&mapping_example_contract.clone(),
+            &mapping_example_contract.clone(),
             Some(_seed),
             &auth_secret_key,
             false,
@@ -317,7 +317,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 2] Call Mapping Contract With Script");
 
     let script_code =
-        fs::read_to_string(Path::new("../masm/scripts/mapping_example_script.masm")).unwrap();
+        fs::read_to_string(Path::new("./masm/scripts/mapping_example_script.masm")).unwrap();
 
     // Create the library from the account source code using the helper function.
     let account_component_lib = create_library(
@@ -379,7 +379,7 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
-### What the Rust Code Does
+### What the Rust code does
 
 - **Client Initialization:**  
   The client is initialized with a connection to the Miden Testnet and a SQLite store. This sets up the environment to deploy and interact with accounts.
@@ -395,7 +395,7 @@ async fn main() -> Result<(), ClientError> {
 
 ---
 
-### Running the Example
+### Running the example
 
 To run the full example, navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 

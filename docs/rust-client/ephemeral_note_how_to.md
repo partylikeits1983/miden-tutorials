@@ -12,13 +12,13 @@ For example, our demo creates a circle of ephemeral note transactions:
 Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
 ```
 
-## What We'll Cover
+## What we'll cover
 
 - **Introduction to Ephemeral Notes:** Understand what ephemeral notes are and how they differ from standard notes.
 - **Serialization Example:** See how to serialize and deserialize a note to demonstrate how notes can be propagated to client instances faster than the blocktime.
 - **Performance Insights:** Observe how ephemeral notes can reduce transaction times dramatically.
 
-## Step-by-Step Process
+## Step-by-step process
 
 1. **Client Initialization:**
    - Set up an RPC client to connect with the Miden testnet.
@@ -43,7 +43,7 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
    - Measure the time taken for each transaction iteration.
    - Sync the client state and print account balances to verify the transactions.
 
-## Full Rust Code Example
+## Full Rust code example
 
 ```rust
 use rand::Rng;
@@ -90,7 +90,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
         .await
         .map_err(ClientError::StoreError)?;
     let arc_store = Arc::new(store);
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng.clone());
+    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
 
     let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
     Ok(client)
