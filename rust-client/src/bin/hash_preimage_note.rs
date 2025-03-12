@@ -160,7 +160,7 @@ async fn main() -> Result<(), ClientError> {
     let amount: u64 = 100;
     let mint_amount = FungibleAsset::new(faucet_id, amount).unwrap();
     let tx_req = TransactionRequestBuilder::mint_fungible_asset(
-        mint_amount.clone(),
+        mint_amount,
         alice_account.id(),
         NoteType::Public,
         client.rng(),
@@ -212,7 +212,7 @@ async fn main() -> Result<(), ClientError> {
         NoteExecutionHint::always(),
         Felt::new(0),
     )?;
-    let vault = NoteAssets::new(vec![mint_amount.clone().into()])?;
+    let vault = NoteAssets::new(vec![mint_amount.into()])?;
     let custom_note = Note::new(vault, metadata, recipient);
     println!("note hash: {:?}", custom_note.hash());
 

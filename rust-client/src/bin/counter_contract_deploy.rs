@@ -50,7 +50,7 @@ pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
     let arc_store = Arc::new(store);
 
     // Create authenticator referencing the store and RNG
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng.clone());
+    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
 
     // Instantiate client (toggle debug mode as needed)
     let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);

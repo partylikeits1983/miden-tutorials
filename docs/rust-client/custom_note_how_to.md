@@ -18,22 +18,22 @@ Unlike Ethereum, where all pending transactions are publicly visible in the memp
 - Writing Miden assembly for a note
 - Consuming notes
 
-## Step-by-Step Process
+## Step-by-step process
 
-### 1. Creating Two Accounts: Alice & Bob
+### 1. Creating two accounts: Alice & Bob
 
 First, we create two basic accounts for the two users:
 - **Alice:** The account that creates and funds the custom note.
 - **Bob:** The account that will consume the note if they know the correct secret.
 
-### 2. Hashing the Secret Number
+### 2. Hashing the secret number
 
 The security of the custom note hinges on a secret number. Here, we will:
 - Choose a secret number (for example, an array of four integers).
 - For simplicity, we're only hashing 4 elements. Therefore, we prepend an empty word—consisting of 4 zero integers—as a placeholder. This is required by the RPO hashing algorithm to ensure the input has the correct structure and length for proper processing.
 - Compute the hash of the secret. The resulting hash will serve as the note’s input, meaning that the note can only be consumed if the secret number’s hash preimage is provided during consumption.
 
-### 3. Creating the Custom Note
+### 3. Creating the custom note
 
 Now, combine the minted asset and the secret hash to build the custom note. The note is created using the following key steps:
 
@@ -90,7 +90,7 @@ begin
 end
 ```
 
-### How the Assembly Code Works:
+### How the assembly code works:
 
 1. **Passing the Secret:**  
    The secret number is passed as `Note Arguments` into the note.
@@ -104,13 +104,13 @@ end
 4. **Asset Transfer:**  
    If the hash of the number passed in as `Note Arguments` matches the hash stored in the note inputs, the script continues, and the asset stored in the note is loaded from memory and passed to Bob’s wallet via the `wallet::receive_asset` function.
 
-### 5. Consuming the Note
+### 5. Consuming the note
 
 With the note created, Bob can now consume it—but only if he provides the correct secret. When Bob initiates the transaction to consume the note, he must supply the same secret number used when Alice created the note. The custom note’s logic will hash the secret and compare it with its stored hash. If they match, Bob’s wallet receives the asset.
 
 ---
 
-## Full Rust Code Example
+## Full Rust code example
 
 The following Rust code demonstrates how to implement the steps outlined above using the Miden client library:
 
