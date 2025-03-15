@@ -2013,6 +2013,7 @@ dependencies = [
  "miden-crypto",
  "miden-lib",
  "miden-objects",
+ "miden-tx",
  "rand",
  "rand_chacha",
  "serde",

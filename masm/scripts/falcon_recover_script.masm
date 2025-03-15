@@ -1,0 +1,21 @@
+use.miden_by_example::falcon_recover
+use.std::sys
+
+begin
+    push.111 debug.stack drop
+
+    push.0.0.0.0
+
+    adv.push_mapval 
+    
+    adv_push.4
+
+    push.0
+
+    push.202 debug.stack drop
+
+
+    call.falcon_recover::get_signer
+
+    exec.sys::truncate_stack
+end
