@@ -536,3 +536,7 @@ To run the full example, navigate to the `rust-client` directory in the [miden-t
 cd rust-client
 cargo run --release --bin note_creation_in_masm
 ```
+
+### Continue learning
+
+Next tutorial: [How to Use Mappings in Miden Assembly](./mappings_in_masm_how_to.md)

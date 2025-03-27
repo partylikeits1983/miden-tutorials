@@ -458,3 +458,7 @@ To run the ephemeral note transfer example, navigate to the `rust-client` direct
 cd rust-client
 cargo run --release --bin ephemeral_note_transfer
 ```
+
+### Continue learning
+
+Next tutorial: [How to Create a Custom Note](./custom_note_how_to.md)

@@ -824,3 +824,7 @@ To run the full example, navigate to the `rust-client` directory in the [miden-t
 cd rust-client
 cargo run --release --bin counter_contract_fpi
 ```
+
+### Continue learning
+
+Next tutorial: [How to Use Ephemeral Notes](./ephemeral_note_how_to.md)

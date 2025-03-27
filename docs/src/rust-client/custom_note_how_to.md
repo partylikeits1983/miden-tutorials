@@ -419,3 +419,7 @@ To run the custom note example, navigate to the `rust-client` directory in the [
 cd rust-client
 cargo run --release --bin hash_preimage_note
 ```
+
+### Continue learning
+
+Next tutorial: [Creating Notes in Miden Assembly ](./creating_notes_in_masm_tutorial.md)
