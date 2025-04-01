@@ -89,7 +89,7 @@ async fn main() -> Result<(), ClientError> {
     // Initialize client
     let endpoint = Endpoint::new(
         "https".to_string(),
-        "rpc.devnet.miden.io".to_string(),
+        "rpc.testnet.miden.io".to_string(),
         Some(443),
     );
     let timeout_ms = 10_000;
@@ -417,7 +417,7 @@ async fn main() -> Result<(), ClientError> {
     // Initialize client
     let endpoint = Endpoint::new(
         "https".to_string(),
-        "rpc.devnet.miden.io".to_string(),
+        "rpc.testnet.miden.io".to_string(),
         Some(443),
     );
     let timeout_ms = 10_000;

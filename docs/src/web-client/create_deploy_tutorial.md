@@ -37,13 +37,13 @@ Note: *The term "account" can be used interchangeably with the term "smart contr
 Create a new React TypeScript repository for your Miden web application, navigate to it, and install the Miden WebClient using this command:
 
 ```bash
-pnpm create vite miden-app --template react-ts
+pnpm create vite miden-webapp --template react-ts
 ```
 
 Navigate to the new repository:
 
 ```bash
-cd miden-app
+cd miden-webapp
 ```
 
 Install dependencies:
@@ -55,7 +55,7 @@ pnpm install
 Install the Miden WebClient SDK:
 
 ```bash
-pnpm i @demox-labs/miden-sdk@0.6.1-next.4
+pnpm i @demox-labs/miden-sdk@0.8.1
 ```
 
 Save this as your `vite.config.ts` file:
@@ -68,9 +68,25 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: 'esnext',
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      external: ['@demox-labs/miden-sdk'],
+      output: {
+        format: "es",
+      },
+    },
   },
   optimizeDeps: {
-    exclude: ['@demox-labs/miden-sdk'], // Exclude the SDK from optimization
+    include: ['@demox-labs/miden-sdk'],
+    esbuildOptions: {
+      target: "esnext",
+      supported: {
+        "top-level-await": true, 
+      },
+    },
   },
 });
 ```
@@ -101,18 +117,23 @@ In the `src/` directory create a file named `webClient.ts` and paste the followi
 
 ```ts
 // src/webClient.ts
-import { WebClient } from "@demox-labs/miden-sdk";
+import {
+  WebClient,
+  AccountStorageMode,
+  AccountId,
+  NoteType,
+} from "@demox-labs/miden-sdk";
 
 const nodeEndpoint = "https://rpc.testnet.miden.io:443";
 
 export async function webClient(): Promise<void> {
   try {
     // 1. Create client
-    const client = await WebClient.create_client(nodeEndpoint);
+    const client = await WebClient.createClient(nodeEndpoint);
 
     // 2. Sync and log block
-    const state = await client.sync_state();
-    console.log("Latest block number:", state.block_num());
+    const state = await client.syncState();
+    console.log("Latest block number:", state.blockNum());
   } catch (error) {
     console.error("Error", error);
     throw error;
@@ -196,22 +217,22 @@ const nodeEndpoint = "https://rpc.testnet.miden.io:443";
 export async function webClient(): Promise<void> {
   try {
     // 1. Create client
-    const client = await WebClient.create_client(nodeEndpoint);
+    const client = await WebClient.createClient(nodeEndpoint);
 
     // 2. Sync and log block
-    const state = await client.sync_state();
-    console.log("Latest block number:", state.block_num());
+    const state = await client.syncState();
+    console.log("Latest block number:", state.blockNum());
 
     // 3. Create Alice account (public, updatable)
     console.log("Creating account for Alice");
-    const aliceAccount = await client.new_wallet(
+    const aliceAccount = await client.newWallet(
       AccountStorageMode.public(), // account type
       true,                        // mutability
     );
-    const aliceIdHex = aliceAccount.id().to_string();
+    const aliceIdHex = aliceAccount.id().toString();
     console.log("Alice's account ID:", aliceIdHex);
 
-    await client.sync_state();
+    await client.syncState();
   } catch (error) {
     console.error("Error:", error);
     throw error;
@@ -230,17 +251,15 @@ Add this snippet to the end of the `webClient()` function:
 ```ts
 // 4. Create faucet
 console.log("Creating faucet...");
-const faucetAccount = await client.new_faucet(
-  AccountStorageMode.public(), // account type
-  false,                       // is fungible
-  "MID",                       // symbol
-  8,                           // decimals
-  BigInt(1_000_000)            // max supply
+const faucetAccount = await client.newFaucet(
+  AccountStorageMode.public(),
+  false,
+  "MID",
+  8,
+  BigInt(1_000_000),
 );
-const faucetIdHex = faucetAccount.id().to_string();
+const faucetIdHex = faucetAccount.id().toString();
 console.log("Faucet account ID:", faucetIdHex);
-
-await client.sync_state();
 ```
 
 *When tokens are minted from this faucet, each token batch is represented as a "note" (UTXO). You can think of a Miden Note as a cryptographic cashier's check that has certain spend conditions attached to it.*
@@ -263,36 +282,37 @@ const nodeEndpoint = "https://rpc.testnet.miden.io:443";
 export async function webClient(): Promise<void> {
   try {
     // 1. Create client
-    const client = await WebClient.create_client(nodeEndpoint);
+    const client = await WebClient.createClient(nodeEndpoint);
 
     // 2. Sync and log block
-    const state = await client.sync_state();
-    console.log("Latest block number:", state.block_num());
+    const state = await client.syncState();
+    console.log("Latest block number:", state.blockNum());
 
     // 3. Create Alice account (public, updatable)
     console.log("Creating account for Alice");
-    const aliceAccount = await client.new_wallet(
+    const aliceAccount = await client.newWallet(
       AccountStorageMode.public(),
       true,
     );
-    const aliceIdHex = aliceAccount.id().to_string();
+    const aliceIdHex = aliceAccount.id().toString();
     console.log("Alice's account ID:", aliceIdHex);
 
     // 4. Create faucet
     console.log("Creating faucet...");
-    const faucetAccount = await client.new_faucet(
-      AccountStorageMode.public(), // account type
-      false,                       // is fungible
-      "MID",                       // symbol
-      8,                           // decimals
-      BigInt(1_000_000)            // max supply
+    const faucetAccount = await client.newFaucet(
+      AccountStorageMode.public(),
+      false,
+      "MID",
+      8,
+      BigInt(1_000_000),
     );
-    const faucetIdHex = faucetAccount.id().to_string();
+    const faucetIdHex = faucetAccount.id().toString();
     console.log("Faucet account ID:", faucetIdHex);
 
-    await client.sync_state();
+    await client.syncState();
+    console.log("Tokens sent.");
   } catch (error) {
-    console.error("Error", error);
+    console.error("Error:", error);
     throw error;
   }
 }
