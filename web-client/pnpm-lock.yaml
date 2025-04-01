@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@demox-labs/miden-sdk':
-    specifier: 0.7.5
-    version: 0.7.5(chai@5.2.0)
+    specifier: 0.8.1
+    version: 0.8.1(chai@5.2.0)
   react:
     specifier: ^18.3.1
     version: 18.3.1
@@ -234,8 +234,8 @@ packages:
       '@babel/helper-validator-identifier': 7.25.9
     dev: true
 
-  /@demox-labs/miden-sdk@0.7.5(chai@5.2.0):
-    resolution: {integrity: sha512-hYqpVgRLoALGU/wbsSGGkhyKNUwXRywoJIBj+8Gjwfj5aMFjDPOPrSqsCWVt8OgY1JZckfPxoRB7e8i7YR1pEg==}
+  /@demox-labs/miden-sdk@0.8.1(chai@5.2.0):
+    resolution: {integrity: sha512-SCwbLgYUcKoe6eEa7bjIh5LY3d+9Uw7NJlW0DIyh+Ioyge0BC/PijHGyFWqYBeUjb99wwNV586JXR34g3U7pMA==}
     dependencies:
       chai-as-promised: 8.0.1(chai@5.2.0)
       dexie: 4.0.11
