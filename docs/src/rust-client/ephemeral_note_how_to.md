@@ -48,12 +48,9 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
 ## Full Rust code example
 
 ```rust
-use rand::Rng;
-use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use rand::RngCore;
 use std::sync::Arc;
-use std::time::Instant;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
 use miden_client::{
     account::{
@@ -61,64 +58,39 @@ use miden_client::{
         AccountBuilder, AccountStorageMode, AccountType,
     },
     asset::{FungibleAsset, TokenSymbol},
-    crypto::RpoRandomCoin,
+    auth::AuthSecretKey,
+    builder::ClientBuilder,
+    crypto::SecretKey,
+    keystore::FilesystemKeyStore,
     note::{create_p2id_note, Note, NoteType},
     rpc::{Endpoint, TonicRpcClient},
-    store::{sqlite_store::SqliteStore, StoreAuthenticator},
     transaction::{OutputNote, TransactionRequestBuilder},
     utils::{Deserializable, Serializable},
-    Client, ClientError, Felt,
+    ClientError, Felt,
 };
-
-use miden_objects::{account::AuthSecretKey, crypto::dsa::rpo_falcon512::SecretKey, Word};
-
-pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    // RPC endpoint and timeout
-    let endpoint = Endpoint::new(
-        "https".to_string(),
-        "rpc.testnet.miden.io".to_string(),
-        Some(443),
-    );
-    let timeout_ms = 10_000;
-
-    let rpc_api = Box::new(TonicRpcClient::new(endpoint, timeout_ms));
-
-    let mut seed_rng = rand::thread_rng();
-    let coin_seed: [u64; 4] = seed_rng.gen();
-    let rng = RpoRandomCoin::new(coin_seed.map(Felt::new));
-
-    let store_path = "store.sqlite3";
-    let store = SqliteStore::new(store_path.into())
-        .await
-        .map_err(ClientError::StoreError)?;
-    let arc_store = Arc::new(store);
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
-
-    let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
-    Ok(client)
-}
-
-pub fn get_new_pk_and_authenticator() -> (Word, AuthSecretKey) {
-    let mut seed_rng = rand::thread_rng();
-    let seed: [u8; 32] = seed_rng.gen();
-    let mut rng = ChaCha20Rng::from_seed(seed);
-
-    let sec_key = SecretKey::with_rng(&mut rng);
-    let pub_key: Word = sec_key.public_key().into();
-    let auth_secret_key = AuthSecretKey::RpoFalcon512(sec_key);
-
-    (pub_key, auth_secret_key)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
-    // ===== Client Initialization =====
-    let mut client = initialize_client().await?;
-    println!("Client initialized successfully.");
+    // Initialize client & keystore
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.devnet.miden.io".to_string(),
+        Some(443),
+    );
+    let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
-    // Fetch latest block from node
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
+
     let sync_summary = client.sync_state().await.unwrap();
     println!("Latest block: {}", sync_summary.block_num);
+
+    let keystore = FilesystemKeyStore::new("./keystore".into()).unwrap();
 
     //------------------------------------------------------------
     // STEP 1: Deploy a fungible faucet
@@ -126,8 +98,10 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Deploying a new fungible faucet.");
 
     // Faucet seed
-    let mut init_seed = [0u8; 32];
+    let mut init_seed = [0_u8; 32];
     client.rng().fill_bytes(&mut init_seed);
+
+    let key_pair = SecretKey::with_rng(client.rng());
 
     // Anchor block
     let anchor_block = client.get_latest_epoch_block().await.unwrap();
@@ -138,7 +112,6 @@ async fn main() -> Result<(), ClientError> {
     let max_supply = Felt::new(1_000_000);
 
     // Generate key pair
-    let key_pair = SecretKey::with_rng(client.rng());
 
     // Build the account
     let builder = AccountBuilder::new(init_seed)
@@ -152,14 +125,14 @@ async fn main() -> Result<(), ClientError> {
 
     // Add the faucet to the client
     client
-        .add_account(
-            &faucet_account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
+        .add_account(&faucet_account, Some(seed), false)
         .await?;
     println!("Faucet account ID: {}", faucet_account.id().to_hex());
+
+    // Add the key pair to the keystore
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
 
     // Resync to show newly deployed faucet
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -174,7 +147,8 @@ async fn main() -> Result<(), ClientError> {
     let number_of_accounts = 10;
 
     for i in 0..number_of_accounts {
-        let init_seed = ChaCha20Rng::from_entropy().gen();
+        let mut init_seed = [0_u8; 32];
+        client.rng().fill_bytes(&mut init_seed);
         let key_pair = SecretKey::with_rng(client.rng());
         let builder = AccountBuilder::new(init_seed)
             .anchor((&anchor_block).try_into().unwrap())
@@ -186,14 +160,12 @@ async fn main() -> Result<(), ClientError> {
         let (account, seed) = builder.build().unwrap();
         accounts.push(account.clone());
         println!("account id {:?}: {}", i, account.id().to_hex());
-        client
-            .add_account(
-                &account,
-                Some(seed),
-                &AuthSecretKey::RpoFalcon512(key_pair.clone()),
-                true,
-            )
-            .await?;
+        client.add_account(&account, Some(seed), true).await?;
+
+        // Add the key pair to the keystore
+        keystore
+            .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+            .unwrap();
     }
 
     // For demo purposes, Alice is the first account.
@@ -207,13 +179,14 @@ async fn main() -> Result<(), ClientError> {
     let amount: u64 = 100;
     let fungible_asset_mint_amount = FungibleAsset::new(faucet_account.id(), amount).unwrap();
     let transaction_request = TransactionRequestBuilder::mint_fungible_asset(
-        fungible_asset_mint_amount.clone(),
+        fungible_asset_mint_amount,
         alice.id(),
         NoteType::Public,
         client.rng(),
     )
     .unwrap()
-    .build();
+    .build()
+    .unwrap();
     let tx_execution_result = client
         .new_transaction(faucet_account.id(), transaction_request)
         .await?;
@@ -231,7 +204,8 @@ async fn main() -> Result<(), ClientError> {
 
     let transaction_request = TransactionRequestBuilder::new()
         .with_unauthenticated_input_notes([(p2id_note, None)])
-        .build();
+        .build()
+        .unwrap();
     let tx_execution_result = client
         .new_transaction(alice.id(), transaction_request)
         .await?;
@@ -278,8 +252,8 @@ async fn main() -> Result<(), ClientError> {
         // Time transaction request building
         let transaction_request = TransactionRequestBuilder::new()
             .with_own_output_notes(vec![output_note])
-            .unwrap()
-            .build();
+            .build()
+            .unwrap();
         let tx_execution_result = client
             .new_transaction(accounts[i].id(), transaction_request)
             .await?;
@@ -294,7 +268,8 @@ async fn main() -> Result<(), ClientError> {
         let consume_note_request =
             TransactionRequestBuilder::consume_notes(vec![deserialized_p2id_note.id()])
                 .with_unauthenticated_input_notes([(deserialized_p2id_note, None)])
-                .build();
+                .build()
+                .unwrap();
         let tx_execution_result = client
             .new_transaction(accounts[i + 1].id(), consume_note_request)
             .await?;
@@ -340,105 +315,94 @@ async fn main() -> Result<(), ClientError> {
 The output of our program will look something like this:
 
 ```
-Client initialized successfully.
-Latest block: 402875
+Latest block: 17854
 
 [STEP 1] Deploying a new fungible faucet.
-Faucet account ID: 0x86c03aeb90b2e3200006852488eb50
+Faucet account ID: 0x7a3c3e3e03fe43200000449196ce1f
 
 [STEP 2] Creating new accounts
-account id 0: 0x71c184dcaae5ee1000064e93777b70
-account id 1: 0x74f3b6cdee937110000655e334161b
-account id 2: 0x698ca2e2f7fc7010000643863b9f1a
-account id 3: 0x032dd4e8fad68c100006b82d9ca4db
-account id 4: 0x5bcca043b5de62100006f8db1610ab
-account id 5: 0x6717bbdf75239c10000687c33ce06f
-account id 6: 0x752fe4cebebfeb100006e7f9a3129c
-account id 7: 0xc8ee0c3e68d384100006aeab3b063d
-account id 8: 0x65c8d4a279bf0a100006e1519eca84
-account id 9: 0xac0e06f781ac2d1000067663c3aadf
+account id 0: 0x44d89b438d298e1000003636aa7a58
+account id 1: 0xf275e0bcd03fd110000002b1cd6b60
+account id 2: 0xf18208694c7926100000d1946f306e
+account id 3: 0xc028077080d628100000f47f698791
+account id 4: 0x16c973d5b5cb96100000674ca476f9
+account id 5: 0x53ce6afddd744f100000b5d39c64bd
+account id 6: 0x3b8ed3bfa7c9f9100000dfd8a12b9c
+account id 7: 0x94117096753d06100000470857d9d2
+account id 8: 0xa8dd5dc6d59e89100000e620b17531
+account id 9: 0x3d0bdd225de2be1000004ffa75a2c1
 
 [STEP 3] Mint tokens
 Minting tokens for Alice...
-one or more warnings were emitted
 
 [STEP 4] Create ephemeral note tx chain
 
 ephemeral tx 1
-sender: 0x71c184dcaae5ee1000064e93777b70
-target: 0x74f3b6cdee937110000655e334161b
-one or more warnings were emitted
-Total time for loop iteration 0: 2.990357s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x11b361d0f0aaa1bbff909dcc0eaa5683afb0d2ad000e09a016a70e190bb8552f
+sender: 0x44d89b438d298e1000003636aa7a58
+target: 0xf275e0bcd03fd110000002b1cd6b60
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x2eb9c92e928595a55c8d98027cb8f434dcaef15a6ce9478518ba8083f80d7928
+Total time for loop iteration 0: 3.126228875s
 
 ephemeral tx 2
-sender: 0x74f3b6cdee937110000655e334161b
-target: 0x698ca2e2f7fc7010000643863b9f1a
-one or more warnings were emitted
-Total time for loop iteration 1: 2.880536333s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x64122981b3405a6b307748473f849b22ae9615706a76145786c553c60de11d31
+sender: 0xf275e0bcd03fd110000002b1cd6b60
+target: 0xf18208694c7926100000d1946f306e
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x8e780ab4715d1473e7babcf05bef6550b9bbaca8dc9460cee3dd3e25bd1f097d
+Total time for loop iteration 1: 2.969214834s
 
 ephemeral tx 3
-sender: 0x698ca2e2f7fc7010000643863b9f1a
-target: 0x032dd4e8fad68c100006b82d9ca4db
-one or more warnings were emitted
-Total time for loop iteration 2: 3.203270708s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xcaeb762b744db5e2874ed33dd30333eb22a0f92117ba648c4894892e59425660
+sender: 0xf18208694c7926100000d1946f306e
+target: 0xc028077080d628100000f47f698791
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdccd832ed22c9cd9054559d7746b5fe4cc9e78da50638e4a30973f4f0ea74e63
+Total time for loop iteration 2: 2.967574333s
 
 ephemeral tx 4
-sender: 0x032dd4e8fad68c100006b82d9ca4db
-target: 0x5bcca043b5de62100006f8db1610ab
-one or more warnings were emitted
-Total time for loop iteration 3: 3.189577792s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xfddc5b0c0668cb1caae144ca230aa5a99da07808f63df213a28fffe3d120ae52
+sender: 0xc028077080d628100000f47f698791
+target: 0x16c973d5b5cb96100000674ca476f9
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xc8fe1dd90b9008861e4ea3583195edadefbb9443f657ae296dfba0bf4ac56519
+Total time for loop iteration 3: 2.86498225s
 
 ephemeral tx 5
-sender: 0x5bcca043b5de62100006f8db1610ab
-target: 0x6717bbdf75239c10000687c33ce06f
-one or more warnings were emitted
-Total time for loop iteration 4: 2.904180125s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x4d9d23018669aea665daf65dabaedbf1a6f957a4dc85c1012380dfa0a25f1e1f
+sender: 0x16c973d5b5cb96100000674ca476f9
+target: 0x53ce6afddd744f100000b5d39c64bd
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xaf4450834db4397de1832ea826c1fcecdf7fee0d8498110f857761e5f4c05bb6
+Total time for loop iteration 4: 2.879300125s
 
 ephemeral tx 6
-sender: 0x6717bbdf75239c10000687c33ce06f
-target: 0x752fe4cebebfeb100006e7f9a3129c
-one or more warnings were emitted
-Total time for loop iteration 5: 2.886588458s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x39be34b79aa24720c007fad3895e585239ca231f230b6e1ed5f4551319895fd9
+sender: 0x53ce6afddd744f100000b5d39c64bd
+target: 0x3b8ed3bfa7c9f9100000dfd8a12b9c
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xb5f3b92272ffde9a5e9634fe8e5ef9d0dc2dc6e1695f09685f5a80f143fef421
+Total time for loop iteration 5: 2.829184834s
 
 ephemeral tx 7
-sender: 0x752fe4cebebfeb100006e7f9a3129c
-target: 0xc8ee0c3e68d384100006aeab3b063d
-one or more warnings were emitted
-Total time for loop iteration 6: 3.071692334s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x6c38d351b9c4d86b076e6a3e69a667a1ceac94157008d9a0e81ef8370a16c334
+sender: 0x3b8ed3bfa7c9f9100000dfd8a12b9c
+target: 0x94117096753d06100000470857d9d2
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xed5eaba98132dd7bce4421da72cac330758ca41bd8818edb07526f7b662d8827
+Total time for loop iteration 6: 2.897448917s
 
 ephemeral tx 8
-sender: 0xc8ee0c3e68d384100006aeab3b063d
-target: 0x65c8d4a279bf0a100006e1519eca84
-one or more warnings were emitted
-Total time for loop iteration 7: 2.89388675s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x260e2ce59ddab76dc7b403b1003ff891ca2519dda1ee8cd8a9966507b955ff8b
+sender: 0x94117096753d06100000470857d9d2
+target: 0xa8dd5dc6d59e89100000e620b17531
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdd9cc26dbdbb542ef835780f9881708b9867190c353810ebce501955c5dad139
+Total time for loop iteration 7: 2.864668333s
 
 ephemeral tx 9
-sender: 0x65c8d4a279bf0a100006e1519eca84
-target: 0xac0e06f781ac2d1000067663c3aadf
-one or more warnings were emitted
-Total time for loop iteration 8: 2.897855958s
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x3cdc6659cd270e07137499d204270211dfda8c34aa3a80c3b6dc8064ac8cb09a
+sender: 0xa8dd5dc6d59e89100000e620b17531
+target: 0x3d0bdd225de2be1000004ffa75a2c1
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdd6e35b59032c0a22ce1e8f27c43ee7935ec1c2077ff1c37444ded09b879c330
+Total time for loop iteration 8: 3.070943167s
 
-Total execution time for ephemeral note txs: 26.920523209s
-blocks: [BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884), BlockNumber(402884)]
-Account: 0x71c184dcaae5ee1000064e93777b70 balance: 80
-Account: 0x74f3b6cdee937110000655e334161b balance: 0
-Account: 0x698ca2e2f7fc7010000643863b9f1a balance: 0
-Account: 0x032dd4e8fad68c100006b82d9ca4db balance: 0
-Account: 0x5bcca043b5de62100006f8db1610ab balance: 0
-Account: 0x6717bbdf75239c10000687c33ce06f balance: 0
-Account: 0x752fe4cebebfeb100006e7f9a3129c balance: 0
-Account: 0xc8ee0c3e68d384100006aeab3b063d balance: 0
-Account: 0x65c8d4a279bf0a100006e1519eca84 balance: 0
-Account: 0xac0e06f781ac2d1000067663c3aadf balance: 20
+Total execution time for ephemeral note txs: 26.46999025s
+blocks: [BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859)]
+Account: 0x44d89b438d298e1000003636aa7a58 balance: 80
+Account: 0xf275e0bcd03fd110000002b1cd6b60 balance: 0
+Account: 0xf18208694c7926100000d1946f306e balance: 0
+Account: 0xc028077080d628100000f47f698791 balance: 0
+Account: 0x16c973d5b5cb96100000674ca476f9 balance: 0
+Account: 0x53ce6afddd744f100000b5d39c64bd balance: 0
+Account: 0x3b8ed3bfa7c9f9100000dfd8a12b9c balance: 0
+Account: 0x94117096753d06100000470857d9d2 balance: 0
+Account: 0xa8dd5dc6d59e89100000e620b17531 balance: 0
+Account: 0x3d0bdd225de2be1000004ffa75a2c1 balance: 20
 ```
 
 ## Conclusion
@@ -458,3 +422,7 @@ To run the ephemeral note transfer example, navigate to the `rust-client` direct
 cd rust-client
 cargo run --release --bin ephemeral_note_transfer
 ```
+
+### Continue learning
+
+Next tutorial: [How to Use Mappings in Miden Assembly](mappings_in_masm_how_to.md)
