@@ -45,15 +45,16 @@ Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-miden-client = { version = "0.7", features = ["testing", "concurrent", "tonic", "sqlite"] }
-miden-lib = { version = "0.7", default-features = false }
-miden-objects = { version = "0.7.2", default-features = false }
-miden-crypto = { version = "0.13.2", features = ["executable"] }
-rand = { version = "0.8" }
+miden-client = { version = "0.8.1", features = ["testing", "concurrent", "tonic", "sqlite"] }
+miden-lib = { version = "0.8", default-features = false }
+miden-objects = { version = "0.8", default-features = false }
+miden-crypto = { version = "0.14.0", features = ["executable"] }
+miden-assembly = "0.13.0"
+rand = { version = "0.9" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 tokio = { version = "1.40", features = ["rt-multi-thread", "net", "macros"] }
-rand_chacha = "0.3.1"
+rand_chacha = "0.9.0"
 ```
 
 ## Step 2: Write the Note Script
@@ -81,6 +82,7 @@ Inside the `masm/notes/` directory, create the file `iterative_output_note.masm`
 use.miden::note
 use.miden::tx
 use.std::sys
+use.std::crypto::hashes::rpo
 use.miden::contracts::wallets::basic->wallet
 
 # Memory Addresses
@@ -92,7 +94,7 @@ const.TAG=10
 
 # => []
 begin
-    # Drop word if the user accidentally pushes note_args
+    # Drop word if user accidentally pushes note_args
     dropw
     # => []
 
@@ -117,7 +119,7 @@ begin
     mem_loadw.ASSET
     # => [ASSET]
 
-    # Receive the entire asset amount to the wallet 
+    # Receive the entire asset amount to the wallet
     call.wallet::receive_asset
     # => []
 
@@ -125,12 +127,12 @@ begin
     push.8.ACCOUNT_ID_PREFIX
     # => [memory_address_pointer, number_of_inputs]
 
-    # Note: Must pad with 0s to the nearest multiple of 8
-    exec.note::compute_inputs_hash
+    # Note: Must pad with 0s to nearest multiple of 8
+    exec.rpo::hash_memory
     # => [INPUTS_COMMITMENT]
 
     # Push script hash
-    exec.note::get_script_hash
+    exec.note::get_script_root
     # => [SCRIPT_HASH, INPUTS_COMMITMENT]
 
     # Get the current note serial number
@@ -206,8 +208,7 @@ With the Miden assembly note script written, we can move on to writing the Rust 
 Copy and paste the following code into your `src/main.rs` file.
 
 ```rust
-use rand::Rng;
-use rand_chacha::{rand_core::SeedableRng, ChaCha20Rng};
+use rand::{prelude::StdRng, RngCore};
 use std::{fs, path::Path, sync::Arc};
 use tokio::time::{sleep, Duration};
 
@@ -217,54 +218,23 @@ use miden_client::{
         AccountBuilder, AccountStorageMode, AccountType,
     },
     asset::{FungibleAsset, TokenSymbol},
-    crypto::RpoRandomCoin,
+    auth::AuthSecretKey,
+    builder::ClientBuilder,
+    crypto::{FeltRng, SecretKey},
+    keystore::FilesystemKeyStore,
     note::{
         Note, NoteAssets, NoteExecutionHint, NoteExecutionMode, NoteInputs, NoteMetadata,
         NoteRecipient, NoteScript, NoteTag, NoteType,
     },
     rpc::{Endpoint, TonicRpcClient},
-    store::{sqlite_store::SqliteStore, StoreAuthenticator},
     transaction::{OutputNote, TransactionKernel, TransactionRequestBuilder},
     Client, ClientError, Felt,
 };
 
-use miden_crypto::rand::FeltRng;
-use miden_objects::{account::AuthSecretKey, crypto::dsa::rpo_falcon512::SecretKey, Word};
-
-// Initialize client helper
-pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    let endpoint = Endpoint::new("https".into(), "rpc.testnet.miden.io".into(), Some(443));
-    let rpc_api = Box::new(TonicRpcClient::new(endpoint, 10_000));
-    let coin_seed: [u64; 4] = rand::thread_rng().gen();
-    let rng = RpoRandomCoin::new(coin_seed.map(Felt::new));
-    let store = SqliteStore::new("store.sqlite3".into())
-        .await
-        .map_err(ClientError::StoreError)?;
-    let arc_store = Arc::new(store);
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
-    Ok(Client::new(
-        rpc_api,
-        rng,
-        arc_store,
-        Arc::new(authenticator),
-        true,
-    ))
-}
-
-// Helper to create keys & authenticator
-pub fn get_new_pk_and_authenticator() -> (Word, AuthSecretKey) {
-    let seed = [0_u8; 32];
-    let mut rng = ChaCha20Rng::from_seed(seed);
-    let sec_key = SecretKey::with_rng(&mut rng);
-    (
-        sec_key.public_key().into(),
-        AuthSecretKey::RpoFalcon512(sec_key),
-    )
-}
-
 // Helper to create a basic account
 async fn create_basic_account(
-    client: &mut Client<RpoRandomCoin>,
+    client: &mut Client,
+    keystore: FilesystemKeyStore<StdRng>,
 ) -> Result<miden_client::account::Account, ClientError> {
     let mut init_seed = [0u8; 32];
     client.rng().fill_bytes(&mut init_seed);
@@ -277,19 +247,16 @@ async fn create_basic_account(
         .with_component(RpoFalcon512::new(key_pair.public_key()))
         .with_component(BasicWallet);
     let (account, seed) = builder.build().unwrap();
-    client
-        .add_account(
-            &account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
-        .await?;
+    client.add_account(&account, Some(seed), false).await?;
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
     Ok(account)
 }
 
 async fn create_basic_faucet(
-    client: &mut Client<RpoRandomCoin>,
+    client: &mut Client,
+    keystore: FilesystemKeyStore<StdRng>,
 ) -> Result<miden_client::account::Account, ClientError> {
     let mut init_seed = [0u8; 32];
     client.rng().fill_bytes(&mut init_seed);
@@ -305,20 +272,16 @@ async fn create_basic_faucet(
         .with_component(RpoFalcon512::new(key_pair.public_key()))
         .with_component(BasicFungibleFaucet::new(symbol, decimals, max_supply).unwrap());
     let (account, seed) = builder.build().unwrap();
-    client
-        .add_account(
-            &account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
-        .await?;
+    client.add_account(&account, Some(seed), false).await?;
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
     Ok(account)
 }
 
 // Helper to wait until an account has the expected number of consumable notes
 async fn wait_for_notes(
-    client: &mut Client<RpoRandomCoin>,
+    client: &mut Client,
     account_id: &miden_client::account::Account,
     expected: usize,
 ) -> Result<(), ClientError> {
@@ -337,26 +300,41 @@ async fn wait_for_notes(
     }
     Ok(())
 }
-
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
-    let mut client = initialize_client().await?;
-    println!(
-        "Client initialized successfully. Latest block: {}",
-        client.sync_state().await.unwrap().block_num
+    // Initialize client & keystore
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.devnet.miden.io".to_string(),
+        Some(443),
     );
+    let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
+
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
+
+    let sync_summary = client.sync_state().await.unwrap();
+    println!("Latest block: {}", sync_summary.block_num);
+
+    let keystore: FilesystemKeyStore<rand::prelude::StdRng> =
+        FilesystemKeyStore::new("./keystore".into()).unwrap();
 
     // -------------------------------------------------------------------------
     // STEP 1: Create accounts and deploy faucet
     // -------------------------------------------------------------------------
     println!("\n[STEP 1] Creating new accounts");
-    let alice_account = create_basic_account(&mut client).await?;
+    let alice_account = create_basic_account(&mut client, keystore.clone()).await?;
     println!("Alice's account ID: {:?}", alice_account.id().to_hex());
-    let bob_account = create_basic_account(&mut client).await?;
+    let bob_account = create_basic_account(&mut client, keystore.clone()).await?;
     println!("Bob's account ID: {:?}", bob_account.id().to_hex());
 
     println!("\nDeploying a new fungible faucet.");
-    let faucet = create_basic_faucet(&mut client).await?;
+    let faucet = create_basic_faucet(&mut client, keystore.clone()).await?;
     println!("Faucet account ID: {:?}", faucet.id().to_hex());
     client.sync_state().await?;
 
@@ -375,7 +353,8 @@ async fn main() -> Result<(), ClientError> {
         client.rng(),
     )
     .unwrap()
-    .build();
+    .build()
+    .unwrap();
 
     let tx_exec = client.new_transaction(faucet.id(), tx_req).await?;
     client.submit_transaction(tx_exec.clone()).await?;
@@ -390,7 +369,8 @@ async fn main() -> Result<(), ClientError> {
 
     let consume_req = TransactionRequestBuilder::new()
         .with_authenticated_input_notes([(p2id_note.id(), None)])
-        .build();
+        .build()
+        .unwrap();
     let tx_exec = client
         .new_transaction(alice_account.id(), consume_req)
         .await?;
@@ -406,8 +386,6 @@ async fn main() -> Result<(), ClientError> {
     let code = fs::read_to_string(Path::new("../masm/notes/iterative_output_note.masm")).unwrap();
     let rng = client.rng();
     let serial_num = rng.draw_word();
-
-    println!("Original serial_num: {:?}", serial_num);
 
     // Create note metadata and tag
     let tag = NoteTag::for_public_use_case(0, 0, NoteExecutionMode::Local).unwrap();
@@ -431,12 +409,10 @@ async fn main() -> Result<(), ClientError> {
     let vault = NoteAssets::new(vec![mint_amount.into()])?;
     let custom_note = Note::new(vault, metadata, recipient);
 
-    println!("First note serial_num: {:?}", custom_note.serial_num());
-
     let note_req = TransactionRequestBuilder::new()
         .with_own_output_notes(vec![OutputNote::Full(custom_note.clone())])
-        .unwrap()
-        .build();
+        .build()
+        .unwrap();
     let tx_result = client
         .new_transaction(alice_account.id(), note_req)
         .await
@@ -464,7 +440,7 @@ async fn main() -> Result<(), ClientError> {
     // Reuse the note_script and note_inputs
     let recipient = NoteRecipient::new(serial_num_1, note_script, note_inputs);
 
-    // Change metadata to include Bob's account
+    // Note: Change metadata to include Bob's account as the creator
     let metadata = NoteMetadata::new(
         bob_account.id(),
         NoteType::Public,
@@ -480,7 +456,8 @@ async fn main() -> Result<(), ClientError> {
     let consume_custom_req = TransactionRequestBuilder::new()
         .with_unauthenticated_input_notes([(custom_note, None)])
         .with_expected_output_notes(vec![output_note])
-        .build();
+        .build()
+        .unwrap();
     let tx_result = client
         .new_transaction(bob_account.id(), consume_custom_req)
         .await
@@ -504,26 +481,24 @@ cargo run --release
 
 The output will look something like this:
 ```
-Client initialized successfully. Latest block: 989439
+Latest block: 18392
 
 [STEP 1] Creating new accounts
-Alice's account ID: "0xaade9e12089cd410000f3d96d5b56a"
-Bob's account ID: "0xd252a313bc1b2110000f1ed2a098fd"
+Alice's account ID: "0xb23fa56edfb652100000354f9ad0f3"
+Bob's account ID: "0xe4b869133a460d100000e036fe951e"
 
 Deploying a new fungible faucet.
-Faucet account ID: "0x627130fafad14720000f96b472dea8"
+Faucet account ID: "0x0cc82fb7d6d5ba200000accff80c0c"
 
 [STEP 2] Mint tokens with P2ID
-0 consumable notes found for account 0xaade9e12089cd410000f3d96d5b56a. Waiting...
-one or more warnings were emitted
+0 consumable notes found for account 0xb23fa56edfb652100000354f9ad0f3. Waiting...
 
 [STEP 3] Create iterative output note
-View transaction on MidenScan: https://testnet.midenscan.com/tx/0xa5fe1b73c1947e86baed5f80b8de84d3b31b83f49bfb9828e1ba5641bc7fd8ff
+View transaction on MidenScan: https://testnet.midenscan.com/tx/0x0c67c2de1b028bcb495f60f8ad81168f99cffeded00e293344dac6f45f702433
 
 [STEP 4] Bob consumes the note and creates a copy
-one or more warnings were emitted
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xaa772d3e7fb5d887f8074c88cbad967067071e0209510f8bb37a879535a4b16d
-Account delta: AccountVaultDelta { fungible: FungibleAssetDelta({V0(AccountIdV0 { prefix: 7093504742593218336, suffix: 4387826416134144 }): 50}), non_fungible: NonFungibleAssetDelta({}) }
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x717e3fc01da330e25acef2d302691f3a9593ea80bb4668d6fdb12ca35a137119
+Account delta: AccountVaultDelta { fungible: FungibleAssetDelta({V0(AccountIdV0 { prefix: 921038590427118112, suffix: 190009219746816 }): 50}), non_fungible: NonFungibleAssetDelta({}) }
 ```
 
 ---

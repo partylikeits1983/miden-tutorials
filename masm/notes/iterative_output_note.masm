@@ -1,6 +1,7 @@
 use.miden::note
 use.miden::tx
 use.std::sys
+use.std::crypto::hashes::rpo
 use.miden::contracts::wallets::basic->wallet
 
 # Memory Addresses
@@ -46,11 +47,11 @@ begin
     # => [memory_address_pointer, number_of_inputs]
 
     # Note: Must pad with 0s to nearest multiple of 8
-    exec.note::compute_inputs_hash
+    exec.rpo::hash_memory
     # => [INPUTS_COMMITMENT]
 
     # Push script hash
-    exec.note::get_script_hash
+    exec.note::get_script_root
     # => [SCRIPT_HASH, INPUTS_COMMITMENT]
 
     # Get the current note serial number

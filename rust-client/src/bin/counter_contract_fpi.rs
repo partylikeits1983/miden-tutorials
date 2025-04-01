@@ -152,7 +152,7 @@ async fn main() -> Result<(), ClientError> {
             .unwrap()
             .with_supports_all_types();
 
-    // Getting the hash of the `get_count` procedure  
+    // Getting the hash of the `get_count` procedure
     let get_proc_export = counter_contract_component
         .library()
         .exports()
