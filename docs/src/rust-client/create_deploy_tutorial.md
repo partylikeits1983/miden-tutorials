@@ -13,7 +13,6 @@ In this tutorial, we will create a Miden account for *Alice* and deploy a fungib
 - Creating new accounts (public or private)
 - Deploying a faucet to fund an account
 
-
 ## Prerequisites
 
 Before you begin, ensure that a Miden node is running locally in a separate terminal window. To get the Miden node running locally, you can follow the instructions on the [Miden Node Setup](../miden_node_setup.md) page.
@@ -31,7 +30,6 @@ Note: *The term "account" can be used interchangeably with the term "smart contr
 
 *It is useful to think of notes on Miden as "cryptographic cashier's checks" that allow users to send tokens. If the note is private, the note transfer is only known to the sender and receiver.*
 
-
 ## Step 1: Initialize your repository
 
 Create a new Rust repository for your Miden project and navigate to it with the following command:
@@ -45,15 +43,16 @@ Add the following dependencies to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-miden-client = { version = "0.7", features = ["testing", "concurrent", "tonic", "sqlite"] }
-miden-lib = { version = "0.7", default-features = false }
-miden-objects = { version = "0.7.2", default-features = false }
-miden-crypto = { version = "0.13.2", features = ["executable"] }
-rand = { version = "0.8" }
+miden-client = { version = "0.8.1", features = ["testing", "concurrent", "tonic", "sqlite"] }
+miden-lib = { version = "0.8", default-features = false }
+miden-objects = { version = "0.8", default-features = false }
+miden-crypto = { version = "0.14.0", features = ["executable"] }
+miden-assembly = "0.13.0"
+rand = { version = "0.9" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 tokio = { version = "1.40", features = ["rt-multi-thread", "net", "macros"] }
-rand_chacha = "0.3.1"
+rand_chacha = "0.9.0"
 ```
 
 ## Step 2: Initialize the client
@@ -68,6 +67,10 @@ Before interacting with the Miden network, we must instantiate the client. In th
 Copy and paste the following code into your `src/main.rs` file. 
 
 ```rust
+use rand::RngCore;
+use std::sync::Arc;
+use tokio::time::Duration;
+
 use miden_client::{
     account::{
         component::{BasicFungibleFaucet, BasicWallet, RpoFalcon512},
@@ -75,61 +78,39 @@ use miden_client::{
     },
     asset::{FungibleAsset, TokenSymbol},
     auth::AuthSecretKey,
-    crypto::{RpoRandomCoin, SecretKey},
-    note::NoteType,
+    builder::ClientBuilder,
+    crypto::SecretKey,
+    keystore::FilesystemKeyStore,
+    note::{create_p2id_note, NoteType},
     rpc::{Endpoint, TonicRpcClient},
-    store::{sqlite_store::SqliteStore, StoreAuthenticator},
     transaction::{OutputNote, PaymentTransactionData, TransactionRequestBuilder},
-    Client, ClientError, Felt,
+    ClientError, Felt,
 };
-use miden_lib::note::create_p2id_note;
 use miden_objects::account::AccountIdVersion;
-
-use rand::Rng;
-use std::sync::Arc;
-use tokio::time::Duration;
-
-pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    // RPC endpoint and timeout
-    let endpoint = Endpoint::new("http".to_string(), "localhost".to_string(), Some(57291));
-    let timeout_ms = 10_000;
-
-    // Build RPC client
-    let rpc_api = Box::new(TonicRpcClient::new(endpoint, timeout_ms));
-
-    // Seed RNG
-    let mut seed_rng = rand::thread_rng();
-    let coin_seed: [u64; 4] = seed_rng.gen();
-
-    // Create random coin instance
-    let rng = RpoRandomCoin::new(coin_seed.map(Felt::new));
-
-    // SQLite path
-    let store_path = "store.sqlite3";
-
-    // Initialize SQLite store
-    let store = SqliteStore::new(store_path.into())
-        .await
-        .map_err(ClientError::StoreError)?;
-    let arc_store = Arc::new(store);
-
-    // Create authenticator referencing the same store and RNG
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
-
-    // Instantiate the client. Toggle `in_debug_mode` as needed
-    let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
-
-    Ok(client)
-}
 
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
-    let mut client = initialize_client().await?;
-    println!("Client initialized successfully.");
+    // Initialize client & keystore
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.devnet.miden.io".to_string(),
+        Some(443),
+    );
+    let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
+
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
 
     let sync_summary = client.sync_state().await.unwrap();
-    let block_number = sync_summary.block_num;
-    println!("Latest block number: {}", block_number);
+    println!("Latest block: {}", sync_summary.block_num);
+
+    let keystore: FilesystemKeyStore<rand::prelude::StdRng> =
+        FilesystemKeyStore::new("./keystore".into()).unwrap();
 
     Ok(())
 }
@@ -137,7 +118,9 @@ async fn main() -> Result<(), ClientError> {
 
 *When running the code above, there will be some unused imports, however, we will use these imports later on in the tutorial.*
 
-In this step, we will initialize a Miden client capable of syncing with the blockchain (in this case, our local node). Run the following command to execute `src/main.rs`:
+**Note**: Running the code above, will generate a `store.sqlite3` file and a `keystore` directory. The Miden client uses the `store.sqlite3` file to keep track of the state of accounts and notes. The `keystore` directory keeps track of private keys used by accounts. Be sure to add both to your `.gitignore`!
+
+Run the following command to execute `src/main.rs`:
 
 ```bash
 cargo run --release 
@@ -148,6 +131,8 @@ After the program executes, you should see the latest block number printed to th
 ```
 Latest block number: 3855 
 ```
+
+
 
 ## Step 3: Creating a wallet
 
@@ -166,10 +151,9 @@ Add this snippet to the end of your file in the `main()` function:
 println!("\n[STEP 1] Creating a new account for Alice");
 
 // Account seed
-let mut init_seed = [0u8; 32];
+let mut init_seed = [0_u8; 32];
 client.rng().fill_bytes(&mut init_seed);
 
-// Generate key pair
 let key_pair = SecretKey::with_rng(client.rng());
 
 // Anchor block
@@ -187,13 +171,13 @@ let (alice_account, seed) = builder.build().unwrap();
 
 // Add the account to the client
 client
-    .add_account(
-        &alice_account,
-        Some(seed),
-        &AuthSecretKey::RpoFalcon512(key_pair),
-        false,
-    )
+    .add_account(&alice_account, Some(seed), false)
     .await?;
+
+// Add the key pair to the keystore
+keystore
+    .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+    .unwrap();
 
 println!("Alice's account ID: {:?}", alice_account.id().to_hex());
 ```
@@ -236,15 +220,19 @@ let (faucet_account, seed) = builder.build().unwrap();
 
 // Add the faucet to the client
 client
-    .add_account(
-        &faucet_account,
-        Some(seed),
-        &AuthSecretKey::RpoFalcon512(key_pair),
-        false,
-    )
+    .add_account(&faucet_account, Some(seed), false)
     .await?;
 
+// Add the key pair to the keystore
+keystore
+    .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+    .unwrap();
+
 println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
+
+// Resync to show newly deployed faucet
+client.sync_state().await?;
+tokio::time::sleep(Duration::from_secs(2)).await;
 ```
 
 *When tokens are minted from this faucet, each token batch is represented as a "note" (UTXO). You can think of a Miden Note as a cryptographic cashier's check that has certain spend conditions attached to it.*
@@ -256,12 +244,27 @@ Your updated `main()` function in `src/main.rs` should look like this:
 ```rust
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
-    let mut client = initialize_client().await?;
-    println!("Client initialized successfully.");
+    // Initialize client & keystore
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.devnet.miden.io".to_string(),
+        Some(443),
+    );
+    let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
+
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
 
     let sync_summary = client.sync_state().await.unwrap();
-    let block_number = sync_summary.block_num;
-    println!("Latest block number: {}", block_number);
+    println!("Latest block: {}", sync_summary.block_num);
+
+    let keystore: FilesystemKeyStore<rand::prelude::StdRng> =
+        FilesystemKeyStore::new("./keystore".into()).unwrap();
 
     //------------------------------------------------------------
     // STEP 1: Create a basic wallet for Alice
@@ -269,10 +272,9 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Creating a new account for Alice");
 
     // Account seed
-    let mut init_seed = [0u8; 32];
+    let mut init_seed = [0_u8; 32];
     client.rng().fill_bytes(&mut init_seed);
 
-    // Generate key pair
     let key_pair = SecretKey::with_rng(client.rng());
 
     // Anchor block
@@ -290,13 +292,13 @@ async fn main() -> Result<(), ClientError> {
 
     // Add the account to the client
     client
-        .add_account(
-            &alice_account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
+        .add_account(&alice_account, Some(seed), false)
         .await?;
+
+    // Add the key pair to the keystore
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
 
     println!("Alice's account ID: {:?}", alice_account.id().to_hex());
 
@@ -329,18 +331,19 @@ async fn main() -> Result<(), ClientError> {
 
     // Add the faucet to the client
     client
-        .add_account(
-            &faucet_account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
+        .add_account(&faucet_account, Some(seed), false)
         .await?;
+
+    // Add the key pair to the keystore
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
 
     println!("Faucet account ID: {:?}", faucet_account.id().to_hex());
 
     // Resync to show newly deployed faucet
     client.sync_state().await?;
+    tokio::time::sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }
@@ -355,11 +358,13 @@ cargo run --release
 The output will look like this:
 
 ```
+Latest block: 17771
+
 [STEP 1] Creating a new account for Alice
-Alice's account ID: "0x715abc291819b1100000e7cd88cf3e"
+Alice's account ID: "0x3cb3e596d14ad410000017901eaa7b"
 
 [STEP 2] Deploying a new fungible faucet.
-Faucet account ID: "0xab5fb36dd552982000009c440264ce"
+Faucet account ID: "0x6ad1894ac233e4200000088311bb6b"
 ```
 
 In this section we explained how to instantiate the Miden client, create a wallet account, and deploy a faucet. 

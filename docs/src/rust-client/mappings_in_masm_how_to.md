@@ -139,97 +139,26 @@ The script calls the `write_to_map` procedure in the account which writes the ke
 Below is the Rust code that deploys the smart contract, creates the transaction script, and submits a transaction to update the mapping in the account:
 
 ```rust
+use rand::RngCore;
 use std::{fs, path::Path, sync::Arc};
-
-use rand::Rng;
-use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaCha20Rng;
-
-use miden_client::{
-    account::{AccountStorageMode, AccountType},
-    crypto::RpoRandomCoin,
-    rpc::{Endpoint, TonicRpcClient},
-    store::{sqlite_store::SqliteStore, StoreAuthenticator},
-    transaction::{TransactionKernel, TransactionRequestBuilder},
-    Client, ClientError, Felt,
-};
-
-use miden_objects::{
-    account::{AccountBuilder, AccountComponent, AuthSecretKey, StorageMap, StorageSlot},
-    assembly::{Assembler, DefaultSourceManager},
-    crypto::dsa::rpo_falcon512::SecretKey,
-    transaction::TransactionScript,
-    Word,
-};
 
 use miden_assembly::{
     ast::{Module, ModuleKind},
     LibraryPath,
 };
+use miden_client::{
+    account::{AccountBuilder, AccountStorageMode, AccountType, StorageSlot},
+    builder::ClientBuilder,
+    rpc::{Endpoint, TonicRpcClient},
+    transaction::{TransactionKernel, TransactionRequestBuilder, TransactionScript},
+    ClientError, Felt,
+};
+use miden_objects::{
+    account::{AccountComponent, StorageMap},
+    assembly::Assembler,
+    assembly::DefaultSourceManager,
+};
 
-pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    // RPC endpoint and timeout
-    let endpoint = Endpoint::new(
-        "https".to_string(),
-        "rpc.testnet.miden.io".to_string(),
-        Some(443),
-    );
-    let timeout_ms = 10_000;
-
-    // Build RPC client
-    let rpc_api = Box::new(TonicRpcClient::new(endpoint, timeout_ms));
-
-    // Seed RNG
-    let mut seed_rng = rand::thread_rng();
-    let coin_seed: [u64; 4] = seed_rng.gen();
-
-    // Create random coin instance
-    let rng = RpoRandomCoin::new(coin_seed.map(Felt::new));
-
-    // SQLite path
-    let store_path = "store.sqlite3";
-
-    // Initialize SQLite store
-    let store = SqliteStore::new(store_path.into())
-        .await
-        .map_err(ClientError::StoreError)?;
-    let arc_store = Arc::new(store);
-
-    // Create authenticator referencing the store and RNG
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
-
-    // Instantiate client (toggle debug mode as needed)
-    let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
-
-    Ok(client)
-}
-
-pub fn get_new_pk_and_authenticator() -> (Word, AuthSecretKey) {
-    // Create a deterministic RNG with zeroed seed
-    let seed = [0_u8; 32];
-    let mut rng = ChaCha20Rng::from_seed(seed);
-
-    // Generate Falcon-512 secret key
-    let sec_key = SecretKey::with_rng(&mut rng);
-
-    // Convert public key to `Word` (4xFelt)
-    let pub_key: Word = sec_key.public_key().into();
-
-    // Wrap secret key in `AuthSecretKey`
-    let auth_secret_key = AuthSecretKey::RpoFalcon512(sec_key);
-
-    (pub_key, auth_secret_key)
-}
-
-/// Creates a library from the provided source code and library path.
-///
-/// # Arguments
-/// * `assembler` - The assembler instance used to build the library.
-/// * `library_path` - The full library path as a string (e.g., "custom_contract::mapping_example").
-/// * `source_code` - The MASM source code for the module.
-///
-/// # Returns
-/// A `miden_assembly::Library` that can be added to the transaction script.
 fn create_library(
     assembler: Assembler,
     library_path: &str,
@@ -247,13 +176,22 @@ fn create_library(
 
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
-    // -------------------------------------------------------------------------
-    // Initialize the Miden client
-    // -------------------------------------------------------------------------
-    let mut client = initialize_client().await?;
-    println!("Client initialized successfully.");
+    // Initialize client
+    let endpoint = Endpoint::new(
+        "https".to_string(),
+        "rpc.devnet.miden.io".to_string(),
+        Some(443),
+    );
+    let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
-    // Fetch and display the latest synchronized block number from the node.
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
+
     let sync_summary = client.sync_state().await.unwrap();
     println!("Latest block: {}", sync_summary.block_num);
 
@@ -263,7 +201,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Deploy a smart contract with a mapping");
 
     // Load the MASM file for the counter contract
-    let file_path = Path::new("./masm/accounts/mapping_example_contract.masm");
+    let file_path = Path::new("../masm/accounts/mapping_example_contract.masm");
     let account_code = fs::read_to_string(file_path).unwrap();
 
     // Prepare assembler (debug mode = true)
@@ -287,13 +225,14 @@ async fn main() -> Result<(), ClientError> {
     .with_supports_all_types();
 
     // Init seed for the counter contract
-    let init_seed = ChaCha20Rng::from_entropy().gen();
+    let mut init_seed = [0_u8; 32];
+    client.rng().fill_bytes(&mut init_seed);
 
     // Anchor block of the account
     let anchor_block = client.get_latest_epoch_block().await.unwrap();
 
     // Build the new `Account` with the component
-    let (mapping_example_contract, _seed) = AccountBuilder::new(init_seed)
+    let (mapping_example_contract, seed) = AccountBuilder::new(init_seed)
         .anchor((&anchor_block).try_into().unwrap())
         .account_type(AccountType::RegularAccountImmutableCode)
         .storage_mode(AccountStorageMode::Public)
@@ -301,15 +240,8 @@ async fn main() -> Result<(), ClientError> {
         .build()
         .unwrap();
 
-    let (_, auth_secret_key) = get_new_pk_and_authenticator();
-
     client
-        .add_account(
-            &mapping_example_contract.clone(),
-            Some(_seed),
-            &auth_secret_key,
-            false,
-        )
+        .add_account(&mapping_example_contract.clone(), Some(seed), false)
         .await
         .unwrap();
 
@@ -319,7 +251,7 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 2] Call Mapping Contract With Script");
 
     let script_code =
-        fs::read_to_string(Path::new("./masm/scripts/mapping_example_script.masm")).unwrap();
+        fs::read_to_string(Path::new("../masm/scripts/mapping_example_script.masm")).unwrap();
 
     // Create the library from the account source code using the helper function.
     let account_component_lib = create_library(
@@ -340,8 +272,8 @@ async fn main() -> Result<(), ClientError> {
     // Build a transaction request with the custom script
     let tx_increment_request = TransactionRequestBuilder::new()
         .with_custom_script(tx_script)
-        .unwrap()
-        .build();
+        .build()
+        .unwrap();
 
     // Execute the transaction locally
     let tx_result = client
