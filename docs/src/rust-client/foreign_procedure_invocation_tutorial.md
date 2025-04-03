@@ -1,10 +1,10 @@
 # Foreign Procedure Invocation Tutorial
 
-*Using foreign procedure invocation to craft read-only cross-contract calls in the Miden VM*
+_Using foreign procedure invocation to craft read-only cross-contract calls in the Miden VM_
 
 ## Overview
 
-In previous tutorials we deployed a public counter contract and incremented the count from a different client instance. 
+In previous tutorials we deployed a public counter contract and incremented the count from a different client instance.
 
 In this tutorial we will cover the basics of "foreign procedure invocation" (FPI) in the Miden VM, by building a "Count Copy" smart contract that reads the count from our previously deployed counter contract and copies the count to its own local storage.
 
@@ -42,16 +42,16 @@ use.std::sys
 export.copy_count
     exec.tx::execute_foreign_procedure
     # => [count]
-    
+
     debug.stack
     # => [count]
-    
+
     push.0
     # [index, count]
-    
+
     exec.account::set_item
     # => []
-    
+
     push.1 exec.account::incr_nonce
     # => []
 
@@ -60,7 +60,7 @@ export.copy_count
 end
 ```
 
-In the count reader smart contract we have a `copy_count` procedure that uses `tx::execute_foreign_procedure` to call the `get_count` procedure in the counter contract. 
+In the count reader smart contract we have a `copy_count` procedure that uses `tx::execute_foreign_procedure` to call the `get_count` procedure in the counter contract.
 
 To call the `get_count` procedure, we push its hash along with the counter contract's ID suffix and prefix.
 
@@ -72,9 +72,10 @@ This is what the stack state should look like before we call `tx::execute_foreig
 
 After calling the `get_count` procedure in the counter contract, we call `debug.stack` and then save the count of the counter contract to index 0 in storage.
 
-**Note**: *The bracket symbols used in the count copy contract are not valid MASM syntax. These are simply placeholder elements that we will replace with the actual values before compilation.*
+**Note**: _The bracket symbols used in the count copy contract are not valid MASM syntax. These are simply placeholder elements that we will replace with the actual values before compilation._
 
 Inside the `masm/scripts/` directory, create the `reader_script.masm` file:
+
 ```masm
 use.external_contract::count_reader_contract
 use.std::sys
@@ -97,7 +98,7 @@ begin
 end
 ```
 
-**Note**: *`push.{get_count_proc_hash}` is not valid MASM, we will format the string with the value get_count_proc_hash before passing this script code to the assembler.*
+**Note**: _`push.{get_count_proc_hash}` is not valid MASM, we will format the string with the value get_count_proc_hash before passing this script code to the assembler._
 
 ### Step 3: Set up your `src/main.rs` file:
 
@@ -187,11 +188,13 @@ async fn main() -> Result<(), ClientError> {
 ```
 
 Run the following command to execute src/main.rs:
+
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 The output of our program will look something like this:
+
 ```
 Latest block: 17916
 
@@ -254,7 +257,7 @@ let counter_contract_component =
         .unwrap()
         .with_supports_all_types();
 
-// Getting the hash of the `get_count` procedure  
+// Getting the hash of the `get_count` procedure
 let get_proc_export = counter_contract_component
     .library()
     .exports()
@@ -349,7 +352,7 @@ println!(
 );
 ```
 
-The key here is the use of the `.with_foreign_accounts()` method on the  `TransactionRequestBuilder`. Using this method, it is possible to create transactions with multiple foreign procedure calls.
+The key here is the use of the `.with_foreign_accounts()` method on the `TransactionRequestBuilder`. Using this method, it is possible to create transactions with multiple foreign procedure calls.
 
 ## Summary
 
@@ -512,7 +515,7 @@ async fn main() -> Result<(), ClientError> {
             .unwrap()
             .with_supports_all_types();
 
-    // Getting the hash of the `get_count` procedure  
+    // Getting the hash of the `get_count` procedure
     let get_proc_export = counter_contract_component
         .library()
         .exports()

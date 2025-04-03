@@ -1,6 +1,6 @@
 # Creating Notes in Miden Assembly
 
-*Creating notes inside the MidenVM using Miden assembly*
+_Creating notes inside the MidenVM using Miden assembly_
 
 ## Overview
 
@@ -20,6 +20,7 @@ This tutorial assumes you have a basic understanding of Miden assembly and that 
 Being able to create a note in MASM enables you to build various types of applications. Creating a note during the consumption of another note or from an account allows you to develop complex DeFi applications.
 
 Here are some tangible examples of when creating a note in MASM is useful in a DeFi context:
+
 - Creating snapshots of an account's state at a specific point in time (not possible in an EVM context)
 - Representing partially fillable buy/sell orders as notes (SWAPP)
 - Handling withdrawals from a smart contract
@@ -172,32 +173,25 @@ end
 ```
 
 ### How the Assembly Code Works:
+
 1. **Reads note inputs:**  
    The note begins by writing the note inputs to memory by calling the `note::get_inputs` procedure. It writes the note inputs starting at memory address 8, which is defined as the constant `ACCOUNT_ID_PREFIX`.
-   
 2. **Retrieving the asset:**  
    The note then calls `note::get_assets` to write the asset contained in the note to memory address 0, defined as `ASSET`. It computes half of the asset and stores the value at memory address 4, defined as `ASSET_HALF`. Finally, the note calls the `wallet::receive_asset` procedure to move the asset contained in the note to the consuming account.
-   
 3. **Computing note inputs hash in MASM:**  
    The script calls the `note::compute_inputs_hash` procedure with the number of inputs and the memory address where the inputs begin. This procedure returns the note inputs commitment.
-   
 4. **Getting the script hash:**  
    Next, the note script calls the `note::get_script_hash` procedure, which returns the note's script hash.
-   
 5. **Getting the serial number for the future note:**  
    Although not strictly necessary in this scenario, preventing two identical notes from having the same serial number is important. If an account creates two identical notes with the same serial number, recipient, and asset vault, one of the notes may not be consumed. Therefore, the MASM code increments the serial number of the current note by 1.
-   
 6. **Computing the `RECIPIENT` hash:**  
    The `RECIPIENT` hash is defined as:  
    `hash(hash(hash(serial_num, [0; 4]), script_root), input_commitment)`  
    To compute it in MASM, the script calls the `tx::build_recipient_hash` procedure with the serial number, script hash, and inputs commitment on the stack.
-   
 7. **Creating the note:**  
    To create the note, the script pushes the execution hint, note type, aux value, and tag onto the stack, then calls the `wallet::create_note` procedure, which returns a pointer to the note.
-   
 8. **Moving assets to the note:**  
    After the note is created, the script loads the half asset value computed in step 2 onto the stack and calls the `wallet::move_asset_to_note` procedure.
-   
 9. **Stack cleanup:**  
    Finally, the script cleans up the stack by calling `sys::truncate_stack` after creating the note and adding the assets.
 
@@ -476,10 +470,11 @@ async fn main() -> Result<(), ClientError> {
 Run the following command to execute `src/main.rs`:
 
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 The output will look something like this:
+
 ```
 Latest block: 18392
 

@@ -1,12 +1,12 @@
-# How to Use Ephemeral Notes 
+# How to Use Ephemeral Notes
 
-*Using ephemeral notes for optimistic note consumption*
+_Using ephemeral notes for optimistic note consumption_
 
 ## Overview
 
 In this guide, we will explore how to leverage ephemeral notes on Miden to settle transactions faster than the blocktime. Ephemeral notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows the notes to be created and consumed within the same block.
 
-We construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime. 
+We construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime.
 
 For example, our demo creates a circle of ephemeral note transactions:
 
@@ -23,18 +23,22 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
 ## Step-by-step process
 
 1. **Client Initialization:**
+
    - Set up an RPC client to connect with the Miden testnet.
    - Initialize a random coin generator and a store for persisting account data.
 
 2. **Deploying a Fungible Faucet:**
+
    - Use a random seed to deploy a fungible faucet.
    - Configure the faucet parameters (symbol, decimals, and max supply) and add it to the client.
 
 3. **Creating Wallet Accounts:**
+
    - Build multiple wallet accounts using a secure key generation process.
    - Add these accounts to the client, making them ready for transactions.
 
 4. **Minting and Transacting with Ephemeral Notes:**
+
    - Mint tokens for one of the accounts (Alice) from the deployed faucet.
    - Create a note representing the minted tokens.
    - Build and submit a transaction that uses the ephemeral note via the "unauthenticated" method.

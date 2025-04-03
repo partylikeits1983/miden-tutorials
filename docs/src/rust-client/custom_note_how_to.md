@@ -1,6 +1,6 @@
 # How to Create a Custom Note
 
-*Creating notes with custom logic*
+_Creating notes with custom logic_
 
 ## Overview
 
@@ -23,12 +23,14 @@ Unlike Ethereum, where all pending transactions are publicly visible in the memp
 ### 1. Creating two accounts: Alice & Bob
 
 First, we create two basic accounts for the two users:
+
 - **Alice:** The account that creates and funds the custom note.
 - **Bob:** The account that will consume the note if they know the correct secret.
 
 ### 2. Hashing the secret number
 
 The security of the custom note hinges on a secret number. Here, we will:
+
 - Choose a secret number (for example, an array of four integers).
 - For simplicity, we're only hashing 4 elements. Therefore, we prepend an empty word—consisting of 4 zero integers—as a placeholder. This is required by the RPO hashing algorithm to ensure the input has the correct structure and length for proper processing.
 - Compute the hash of the secret. The resulting hash will serve as the note’s input, meaning that the note can only be consumed if the secret number’s hash preimage is provided during consumption.
@@ -37,10 +39,9 @@ The security of the custom note hinges on a secret number. Here, we will:
 
 Now, combine the minted asset and the secret hash to build the custom note. The note is created using the following key steps:
 
-1. **Note Inputs:**  
+1. **Note Inputs:**
    - The note is set up with the asset and the hash of the secret number as its input.
-   
-2. **Miden Assembly Code:**  
+2. **Miden Assembly Code:**
    - The Miden assembly note script ensures that the note can only be consumed if the provided secret, when hashed, matches the hash stored in the note input.
 
 Below is the Miden Assembly code for the note:
@@ -56,34 +57,34 @@ begin
     hperm
     # => [F,E,D]
     # E is digest
-    
+
     dropw swapw dropw
     # => [DIGEST]
-    
+
     # Writing the note inputs to memory
     push.0 exec.note::get_inputs drop drop
     # => [DIGEST]
-    
+
     # Pad stack and load note inputs from memory
     padw push.0 mem_loadw
     # => [INPUTS, DIGEST]
-    
+
     # Assert that the note input matches the digest
     # Will fail if the two hashes do not match
     assert_eqw
     # => []
-    
+
     # Write the asset in note to memory address 0
     push.0 exec.note::get_assets
     # => [num_assets, dest_ptr]
-    
+
     drop
     # => [dest_ptr]
-    
+
     # Load asset from memory
     mem_loadw
     # => [ASSET]
-    
+
     # Call receive asset in wallet
     call.wallet::receive_asset
     # => []
@@ -94,13 +95,10 @@ end
 
 1. **Passing the Secret:**  
    The secret number is passed as `Note Arguments` into the note.
-   
 2. **Hashing the Secret:**  
    The `hperm` instruction applies a hash permutation to the secret number, resulting in a hash that takes up four stack elements.
-   
 3. **Stack Cleanup and Comparison:**  
    The assembly code extracts the digest, loads the note inputs from memory and checks if the computed hash matches the note’s stored hash.
-   
 4. **Asset Transfer:**  
    If the hash of the number passed in as `Note Arguments` matches the hash stored in the note inputs, the script continues, and the asset stored in the note is loaded from memory and passed to Bob’s wallet via the `wallet::receive_asset` function.
 
@@ -375,7 +373,7 @@ View transaction on MidenScan: https://testnet.midenscan.com/tx/0xb3f2fb0f83c262
 0 consumable notes found for account 0xc05d939c75628210000029f9172d7d. Waiting...
 
 [STEP 4] Bob consumes the Custom Note with Correct Secret
-Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x63e3726201897f355c8322a7cf086738b3493daed42c145389acdf3618014d56 
+Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x63e3726201897f355c8322a7cf086738b3493daed42c145389acdf3618014d56
 
 account delta: AccountVaultDelta { fungible: FungibleAssetDelta({V0(AccountIdV0 { prefix: 28574436536292128, suffix: 202860044895232 }): 100}), non_fungible: NonFungibleAssetDelta({}) }
 ```
@@ -384,10 +382,10 @@ account delta: AccountVaultDelta { fungible: FungibleAssetDelta({V0(AccountIdV0 
 
 You have now seen how to create a custom note on Miden that requires a secret preimage to be consumed. We covered:
 
-1) Creating and funding accounts (Alice and Bob)
-2) Hashing a secret number
-3) Building a note with custom logic in Miden Assembly
-4) Consuming the note by providing the correct secret
+1. Creating and funding accounts (Alice and Bob)
+2. Hashing a secret number
+3. Building a note with custom logic in Miden Assembly
+4. Consuming the note by providing the correct secret
 
 By leveraging Miden’s privacy features, you can create customized logic for secure asset transfers that depend on keeping parts of the transaction private.
 

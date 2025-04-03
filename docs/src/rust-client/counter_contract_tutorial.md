@@ -1,6 +1,6 @@
 # Deploying a Counter Contract
 
-*Using the Miden client in Rust to deploy and interact with a custom smart contract on Miden*
+_Using the Miden client in Rust to deploy and interact with a custom smart contract on Miden_
 
 ## Overview
 
@@ -109,7 +109,7 @@ async fn main() -> Result<(), ClientError> {
 }
 ```
 
-*When running the code above, there will be some unused imports, however, we will use these imports later on in the tutorial.*
+_When running the code above, there will be some unused imports, however, we will use these imports later on in the tutorial._
 
 **Note**: Running the code above, will generate a `store.sqlite3` file and a `keystore` directory. The Miden client uses the `store.sqlite3` file to keep track of the state of accounts and notes. The `keystore` directory keeps track of private keys used by accounts. Be sure to add both to your `.gitignore`!
 
@@ -117,7 +117,7 @@ async fn main() -> Result<(), ClientError> {
 
 For better code organization, we will separate the Miden assembly code from our Rust code.
 
-Create a directory named `masm` at the **root** of your `miden-counter-contract` directory. This will contain our contract and script masm code. 
+Create a directory named `masm` at the **root** of your `miden-counter-contract` directory. This will contain our contract and script masm code.
 
 Initialize the `masm` directory:
 
@@ -139,7 +139,7 @@ Below is our counter contract. It has a two exported procedures: `get_count` and
 
 At the beginning of the MASM file, we define our imports. In this case, we import `miden::account` and `std::sys`.
 
-The import `miden::account` contains useful procedures for interacting with a smart contract's state. 
+The import `miden::account` contains useful procedures for interacting with a smart contract's state.
 
 The import `std::sys` contains a useful procedure for truncating the operand stack at the end of a procedure.
 
@@ -156,7 +156,7 @@ The import `std::sys` contains a useful procedure for truncating the operand sta
 2. Calls `account::get_item` with the index of `0`.
 3. Pushes `1` onto the stack.
 4. Adds `1` to the count value returned from `account::get_item`.
-5. *For demonstration purposes*, calls `debug.stack` to see the state of the stack
+5. _For demonstration purposes_, calls `debug.stack` to see the state of the stack
 6. Pushes `0` onto the stack, which is the index of the storage slot we want to write to.
 7. Calls `account::set_item` which saves the incremented count to storage at index `0`
 8. Calls `sys::truncate_stack` to truncate the stack to size 16.
@@ -171,10 +171,10 @@ use.std::sys
 export.get_count
     push.0
     # => [index]
-    
+
     exec.account::get_item
     # => [count]
-    
+
     exec.sys::truncate_stack
     # => []
 end
@@ -182,10 +182,10 @@ end
 export.increment_count
     push.0
     # => [index]
-    
+
     exec.account::get_item
     # => [count]
-    
+
     push.1 add
     # => [count+1]
 
@@ -194,19 +194,19 @@ export.increment_count
 
     push.0
     # [index, count+1]
-    
+
     exec.account::set_item
     # => []
-    
+
     push.1 exec.account::incr_nonce
     # => []
-    
+
     exec.sys::truncate_stack
     # => []
 end
 ```
 
-**Note**: *It's a good habit to add comments below each line of MASM code with the expected stack state. This improves readability and helps with debugging.*
+**Note**: _It's a good habit to add comments below each line of MASM code with the expected stack state. This improves readability and helps with debugging._
 
 ### Concept of function visibility and modifiers in Miden smart contracts
 
@@ -216,11 +216,11 @@ If the `increment_count` procedure did not call the `account::incr_nonce` proced
 
 In essence, if a procedure performs a state change in the Miden smart contract, and does not call `account::incr_nonce` at some point during its execution, this function can be equated to having an `onlyOwner` Solidity modifer, meaning only the user with knowledge of the private key of the account can execute transactions that result in a state change.
 
-**Note**: *Adding the `account::incr_nonce` to a state changing procedure allows any user to call the procedure.*
+**Note**: _Adding the `account::incr_nonce` to a state changing procedure allows any user to call the procedure._
 
 ### Custom script
 
-This is a Miden assembly script that will call the `increment_count` procedure during the transaction. 
+This is a Miden assembly script that will call the `increment_count` procedure during the transaction.
 
 The string `{increment_count}` will be replaced with the hash of the `increment_count` procedure in our rust program.
 
@@ -297,7 +297,7 @@ client
 Run the following command to execute src/main.rs:
 
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 After the program executes, you should see the counter contract hash and contract id printed to the terminal, for example:
@@ -308,7 +308,6 @@ counter_contract commitment: RpoDigest([6587363368733640299, 1119971542296322878
 counter_contract id: "0x2add95df402ee300000027e1a3a003"
 counter_contract storage: AccountStorage { slots: [Value([0, 0, 0, 0])] }
 ```
-
 
 ## Step 4: Incrementing the count
 
@@ -372,7 +371,7 @@ println!(
 );
 ```
 
-**Note**: *Once our counter contract is deployed, other users can increment the count of the smart contract simply by knowing the account id of the contract and the procedure hash of the `increment_count` procedure.*
+**Note**: _Once our counter contract is deployed, other users can increment the count of the smart contract simply by knowing the account id of the contract and the procedure hash of the `increment_count` procedure._
 
 ## Summary
 

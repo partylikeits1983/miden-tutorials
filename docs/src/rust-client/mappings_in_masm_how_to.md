@@ -1,17 +1,18 @@
 # How to Use Mappings in Miden Assembly
 
-*Using mappings in Miden assembly for storing key value pairs*
+_Using mappings in Miden assembly for storing key value pairs_
 
 ## Overview
 
 In this example, we will explore how to use mappings in Miden Assembly. Mappings are essential data structures that store key-value pairs. We will demonstrate how to create an account that contains a mapping and then call a procedure in that account to update the mapping.
 
 At a high level, this example involves:
+
 - Setting up an account with a mapping stored in one of its storage slots.
 - Writing a smart contract in Miden Assembly that includes procedures to read from and write to the mapping.
 - Creating a transaction script that calls these procedures.
 - Using Rust code to deploy the account and submit a transaction that updates the mapping.  
-After the Miden Assembly snippets, we explain that the transaction script calls a procedure in the account. This procedure then updates the mapping by modifying the mapping stored in the account's storage slot.
+  After the Miden Assembly snippets, we explain that the transaction script calls a procedure in the account. This procedure then updates the mapping by modifying the mapping stored in the account's storage slot.
 
 ## What we'll cover
 
@@ -83,7 +84,6 @@ end
 
 - **write_to_map:**  
   The procedure takes a key and a value as inputs. It pushes the storage index (`0` for our mapping) onto the stack, then calls the `set_map_item` procedure from the account library to update the mapping. After updating the map, it drops any unused outputs and increments the nonce.
-  
 - **get_value_in_map:**  
   This procedure takes a key as input and retrieves the corresponding value from the mapping by calling `get_map_item` after pushing the mapping index.
 
@@ -125,6 +125,7 @@ end
 ### Explanation of the transaction script
 
 The transaction script does the following:
+
 - It pushes a key (`[0.0.0.0]`) and a value (`[1.2.3.4]`) onto the stack.
 - It calls the `write_to_map` procedure, which is defined in the account’s smart contract. This updates the mapping in the account.
 - It then pushes the key again and calls `get_value_in_map` to retrieve the value associated with the key.
@@ -322,7 +323,7 @@ async fn main() -> Result<(), ClientError> {
   The account containing the mapping is created by reading the MASM smart contract from a file, compiling it into an `AccountComponent`, and deploying it using an `AccountBuilder`.
 
 - **Creating and Executing a Transaction Script:**  
-  A separate MASM script is compiled into a `TransactionScript`. This script calls the smart contract's procedures to write to and then read from the mapping.  
+  A separate MASM script is compiled into a `TransactionScript`. This script calls the smart contract's procedures to write to and then read from the mapping.
 
 - **Displaying the Result:**  
   Finally, after the transaction is processed, the code reads the updated state of the mapping in the account.

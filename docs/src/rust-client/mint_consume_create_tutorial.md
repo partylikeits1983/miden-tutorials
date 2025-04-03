@@ -1,10 +1,10 @@
 # Mint, Consume, and Create Notes
 
-*Using the Miden client in Rust to mint, consume, and create notes*
+_Using the Miden client in Rust to mint, consume, and create notes_
 
 ## Overview
 
-In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for *Alice*, consume the newly created notes, and demonstrate how to send assets to other accounts.
+In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for _Alice_, consume the newly created notes, and demonstrate how to send assets to other accounts.
 
 ## What we'll cover
 
@@ -14,11 +14,11 @@ In the previous section, we initialized our repository and covered how to create
 
 ## Step 1: Minting tokens from the faucet
 
-To mint notes with tokens from the faucet we created, Alice needs to call the faucet with a mint transaction request. 
+To mint notes with tokens from the faucet we created, Alice needs to call the faucet with a mint transaction request.
 
-*In essence, a transaction request is a structured template that outlines the data required to generate a zero-knowledge proof of a state change of an account. It specifies which input notes (if any) will be consumed, includes an optional transaction script to execute, and enumerates the set of notes expected to be created (if any).*
+_In essence, a transaction request is a structured template that outlines the data required to generate a zero-knowledge proof of a state change of an account. It specifies which input notes (if any) will be consumed, includes an optional transaction script to execute, and enumerates the set of notes expected to be created (if any)._
 
-Below is an example of a transaction request minting tokens from the faucet for Alice. This code snippet will create 5 transaction mint transaction requests. 
+Below is an example of a transaction request minting tokens from the faucet for Alice. This code snippet will create 5 transaction mint transaction requests.
 
 Add this snippet to the end of your file in the `main()` function that we created in the previous chapter:
 
@@ -58,13 +58,13 @@ client.sync_state().await?;
 
 ## Step 2: Identifying consumable notes
 
-Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction. 
+Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction.
 
 Minting a note from a faucet on Miden means a faucet account creates a new note targeted to the requesting account. The requesting account needs to consume this new note to have the assets appear in their account.
 
 To identify consumable notes, the Miden client provides the `get_consumable_notes` function. Before calling it, ensure that the client state is synced.
 
-*Tip: If you know how many notes to expect after a transaction, use an await or loop condition to check how many notes of the type you expect are available for consumption instead of using a set timeout before calling `get_consumable_notes`. This ensures your application isn't idle for longer than necessary.*
+_Tip: If you know how many notes to expect after a transaction, use an await or loop condition to check how many notes of the type you expect are available for consumption instead of using a set timeout before calling `get_consumable_notes`. This ensures your application isn't idle for longer than necessary._
 
 #### Identifying which notes are available:
 
@@ -122,11 +122,11 @@ loop {
 
 After consuming the notes, Alice has tokens in her wallet. Now, she wants to send tokens to her friends. She has two options: create a separate transaction for each transfer or batch multiple transfers into a single transaction.
 
-*The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height.*
+_The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height._
 
 In our example, Alice will now send 50 tokens to 5 different accounts.
 
-For the sake of the example, the first four P2ID transfers are handled in a single transaction, and the fifth transfer is a standard P2ID transfer. 
+For the sake of the example, the first four P2ID transfers are handled in a single transaction, and the fifth transfer is a standard P2ID transfer.
 
 ### Output multiple P2ID notes in a single transaction
 
@@ -235,7 +235,7 @@ client.submit_transaction(tx_execution_result).await?;
 
 ```
 
-Note: *In a production environment do not use `AccountId::new_dummy()`, this is simply for the sake of the tutorial example.*
+Note: _In a production environment do not use `AccountId::new_dummy()`, this is simply for the sake of the tutorial example._
 
 ## Summary
 
@@ -534,7 +534,7 @@ async fn main() -> Result<(), ClientError> {
 Let's run the `src/main.rs` program again:
 
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 The output will look like this:

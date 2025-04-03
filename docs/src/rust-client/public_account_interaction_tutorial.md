@@ -1,6 +1,6 @@
 # Interacting with Public Smart Contracts
 
-*Using the Miden client in Rust to interact with public smart contracts on Miden*
+_Using the Miden client in Rust to interact with public smart contracts on Miden_
 
 ## Overview
 
@@ -17,7 +17,7 @@ Just like in the previous tutorial, we will use a script to invoke the increment
 
 ## Prerequisites
 
-This tutorial assumes you have a basic understanding of Miden assembly and completed the previous tutorial on deploying the counter contract. Although not a requirement, it is recommended to complete the counter contract deployment tutorial before starting this tutorial. 
+This tutorial assumes you have a basic understanding of Miden assembly and completed the previous tutorial on deploying the counter contract. Although not a requirement, it is recommended to complete the counter contract deployment tutorial before starting this tutorial.
 
 ## Step 1: Initialize your repository
 
@@ -48,7 +48,7 @@ rand_chacha = "0.9.0"
 
 For better code organization, we will separate the Miden assembly code from our Rust code.
 
-Create a directory named `masm` at the **root** of your `miden-counter-contract` directory. This will contain our contract and script masm code. 
+Create a directory named `masm` at the **root** of your `miden-counter-contract` directory. This will contain our contract and script masm code.
 
 Initialize the `masm` directory:
 
@@ -73,7 +73,7 @@ use.std::sys
 export.get_count
     # => []
     push.0
-    
+
     # => [index]
     exec.account::get_item
 
@@ -119,11 +119,12 @@ end
 
 ```
 
-**Note**: *We explained in the previous counter contract tutorial what exactly happens at each step in the `increment_count` procedure.*
+**Note**: _We explained in the previous counter contract tutorial what exactly happens at each step in the `increment_count` procedure._
 
 ### Step 3: Set up your `src/main.rs` file
 
 Copy and paste the following code into your `src/main.rs` file:
+
 ```rust
 use std::{fs, path::Path, sync::Arc};
 
@@ -182,7 +183,7 @@ async fn main() -> Result<(), ClientError> {
 
 ## Step 4: Reading public state from a smart contract
 
-To read the public storage state of a smart contract on Miden we either instantiate the `TonicRpcClient` by itself, or use the `test_rpc_api()` method on the `Client` instance. In this example, we will be using the `test_rpc_api()` method. 
+To read the public storage state of a smart contract on Miden we either instantiate the `TonicRpcClient` by itself, or use the `test_rpc_api()` method on the `Client` instance. In this example, we will be using the `test_rpc_api()` method.
 
 We will be reading the public storage state of the counter contract deployed on the testnet at address `0x303dd027d27adc0000012b07dbf1b4`.
 
@@ -220,10 +221,11 @@ let counter_contract = if let Some(account_record) = counter_contract_details {
 Run the following command to execute src/main.rs:
 
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 After the program executes, you should see the counter contract count value and nonce printed to the terminal, for example:
+
 ```
 count val: [0, 0, 0, 5]
 counter nonce: 5
@@ -231,9 +233,8 @@ counter nonce: 5
 
 ## Step 5: Importing a public account
 
-
-
 Add the following code snippet to the end of your `src/main.rs` function:
+
 ```rust
 // -------------------------------------------------------------------------
 // STEP 2: Call the Counter Contract with a script
@@ -520,8 +521,9 @@ async fn main() -> Result<(), ClientError> {
 ```
 
 Run the following command to execute src/main.rs:
+
 ```bash
-cargo run --release 
+cargo run --release
 ```
 
 The output of our program will look something like this depending on the current count value in the smart contract:

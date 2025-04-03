@@ -1,10 +1,10 @@
 # Mint, Consume, and Create Notes
 
-*Using the Miden WebClient in TypeScript to mint, consume, and create notes*
+_Using the Miden WebClient in TypeScript to mint, consume, and create notes_
 
 ## Overview
 
-In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for *Alice*, consume the newly created notes, and demonstrate how to send assets to other accounts.
+In the previous section, we initialized our repository and covered how to create an account and deploy a faucet. In this section, we will mint tokens from the faucet for _Alice_, consume the newly created notes, and demonstrate how to send assets to other accounts.
 
 ## What we'll cover
 
@@ -16,7 +16,7 @@ In the previous section, we initialized our repository and covered how to create
 
 To mint notes with tokens from the faucet we created, Alice can use the WebClient's `new_mint_transaction()` function.
 
-Below is an example of a transaction request minting tokens from the faucet for Alice. 
+Below is an example of a transaction request minting tokens from the faucet for Alice.
 
 Add this snippet to the end of the `webClient` function in the `src/webClient.ts` file that we created in the previous chapter:
 
@@ -35,10 +35,7 @@ let mintTxRequest = client.newMintTransactionRequest(
   BigInt(1000),
 );
 
-let txResult = await client.newTransaction(
-  faucetAccount.id(),
-  mintTxRequest,
-);
+let txResult = await client.newTransaction(faucetAccount.id(), mintTxRequest);
 
 await client.submitTransaction(txResult);
 
@@ -49,13 +46,13 @@ await client.syncState();
 
 ## Step 2: Identifying consumable notes
 
-Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction. 
+Once Alice has minted a note from the faucet, she will eventually want to spend the tokens that she received in the note created by the mint transaction.
 
 Minting a note from a faucet on Miden means a faucet account creates a new note targeted to the requesting account. The requesting account must consume this note for the assets to appear in their account.
 
-To identify notes that are ready to consume, the Miden WebClient has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function. 
+To identify notes that are ready to consume, the Miden WebClient has a useful function `get_consumable_notes`. It is also important to sync the state of the client before calling the `get_consumable_notes` function.
 
-*Tip: If you know the expected number of notes after a transaction, use `await` or a loop condition to verify their availability before calling `get_consumable_notes`. This prevents unnecessary application idling.*
+_Tip: If you know the expected number of notes after a transaction, use `await` or a loop condition to verify their availability before calling `get_consumable_notes`. This prevents unnecessary application idling._
 
 #### Identifying which notes are available:
 
@@ -100,7 +97,7 @@ console.log("Notes consumed.");
 
 After consuming the notes, Alice has tokens in her wallet. Now, she wants to send tokens to her friends. She has two options: create a separate transaction for each transfer or batch multiple notes in a single transaction.
 
-*The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height.*
+_The standard asset transfer note on Miden is the P2ID note (Pay to Id). There is also the P2IDR (Pay to Id Reclaimable) variant which allows the creator of the note to reclaim the note after a certain block height._
 
 In our example, Alice will now send 50 tokens to a different account.
 
@@ -122,10 +119,7 @@ let sendTxRequest = client.newSendTransactionRequest(
   BigInt(100),
 );
 
-let txResult_3 = await client.newTransaction(
-  aliceAccount.id(),
-  sendTxRequest,
-);
+let txResult_3 = await client.newTransaction(aliceAccount.id(), sendTxRequest);
 
 await client.submitTransaction(txResult_3);
 ```
@@ -251,12 +245,11 @@ export async function webClient(): Promise<void> {
     throw error;
   }
 }
-
 ```
 
-Let's run the `src/webClient.ts` function again. Reload the page and click "Start WebClient". 
+Let's run the `src/webClient.ts` function again. Reload the page and click "Start WebClient".
 
-**Note**: *Currently there is a minor bug in the WebClient that produces a warning message, "Error inserting code with root" when creating multiple accounts. This is currently being fixed.*
+**Note**: _Currently there is a minor bug in the WebClient that produces a warning message, "Error inserting code with root" when creating multiple accounts. This is currently being fixed._
 
 The output will look like this:
 
