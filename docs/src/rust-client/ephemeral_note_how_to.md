@@ -1,14 +1,14 @@
-# How to Use Ephemeral Notes
+# How to Use Unauthenticated Notes
 
-_Using ephemeral notes for optimistic note consumption_
+_Using unauthenticated notes for optimistic note consumption_
 
 ## Overview
 
 In this guide, we will explore how to leverage unauthenticated notes on Miden to settle transactions faster than the blocktime. Unauthenticated notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows the notes to be created and consumed within the same block.
 
-We construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime.
+We construct a chain of transactions using the unauthenticated notes method on the transaction builder. Unauthenticated notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime.
 
-For example, our demo creates a circle of ephemeral note transactions:
+For example, our demo creates a circle of unauthenticated note transactions:
 
 ```markdown
 Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
@@ -16,9 +16,9 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
 
 ## What we'll cover
 
-- **Introduction to Ephemeral Notes:** Understand what ephemeral notes are and how they differ from standard notes.
+- **Introduction to Unauthenticated Notes:** Understand what unauthenticated notes are and how they differ from standard notes.
 - **Serialization Example:** See how to serialize and deserialize a note to demonstrate how notes can be propagated to client instances faster than the blocktime.
-- **Performance Insights:** Observe how ephemeral notes can reduce transaction times dramatically.
+- **Performance Insights:** Observe how unauthenticated notes can reduce transaction times dramatically.
 
 ## Step-by-step process
 
@@ -37,13 +37,13 @@ Alice ➡ Bob ➡ Charlie ➡ Dave ➡ Eve ➡ Frank ➡ ...
    - Build multiple wallet accounts using a secure key generation process.
    - Add these accounts to the client, making them ready for transactions.
 
-4. **Minting and Transacting with Ephemeral Notes:**
+4. **Minting and Transacting with Unauthenticated Notes:**
 
    - Mint tokens for one of the accounts (Alice) from the deployed faucet.
    - Create a note representing the minted tokens.
-   - Build and submit a transaction that uses the ephemeral note via the "unauthenticated" method.
+   - Build and submit a transaction that uses the unauthenticated note via the "unauthenticated" method.
    - Serialize the note to demonstrate how it could be transferred to another client instance.
-   - Consume the note in a subsequent transaction, effectively creating a chain of ephemeral transactions.
+   - Consume the note in a subsequent transaction, effectively creating a chain of unauthenticated transactions.
 
 5. **Performance Timing and Syncing:**
    - Measure the time taken for each transaction iteration.
@@ -217,15 +217,15 @@ async fn main() -> Result<(), ClientError> {
     client.sync_state().await?;
 
     //------------------------------------------------------------
-    // STEP 4: Create ephemeral note tx chain
+    // STEP 4: Create unauthenticated note tx chain
     //------------------------------------------------------------
-    println!("\n[STEP 4] Create ephemeral note tx chain");
+    println!("\n[STEP 4] Create unauthenticated note tx chain");
     let mut landed_blocks = vec![];
     let start = Instant::now();
 
     for i in 0..number_of_accounts - 1 {
         let loop_start = Instant::now();
-        println!("\nephemeral tx {:?}", i + 1);
+        println!("\nunauthenticated tx {:?}", i + 1);
         println!("sender: {}", accounts[i].id().to_hex());
         println!("target: {}", accounts[i + 1].id().to_hex());
 
@@ -234,7 +234,7 @@ async fn main() -> Result<(), ClientError> {
         let fungible_asset_send_amount =
             FungibleAsset::new(faucet_account.id(), send_amount).unwrap();
 
-        // for demo purposes, ephemeral notes can be public or private
+        // for demo purposes, unauthenticated notes can be public or private
         let note_type = if i % 2 == 0 {
             NoteType::Private
         } else {
@@ -294,7 +294,7 @@ async fn main() -> Result<(), ClientError> {
     }
 
     println!(
-        "\nTotal execution time for ephemeral note txs: {:?}",
+        "\nTotal execution time for unauthenticated note txs: {:?}",
         start.elapsed()
     );
     println!("blocks: {:?}", landed_blocks);
@@ -339,63 +339,63 @@ account id 9: 0x3d0bdd225de2be1000004ffa75a2c1
 [STEP 3] Mint tokens
 Minting tokens for Alice...
 
-[STEP 4] Create ephemeral note tx chain
+[STEP 4] Create unauthenticated note tx chain
 
-ephemeral tx 1
+unauthenticated tx 1
 sender: 0x44d89b438d298e1000003636aa7a58
 target: 0xf275e0bcd03fd110000002b1cd6b60
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x2eb9c92e928595a55c8d98027cb8f434dcaef15a6ce9478518ba8083f80d7928
 Total time for loop iteration 0: 3.126228875s
 
-ephemeral tx 2
+unauthenticated tx 2
 sender: 0xf275e0bcd03fd110000002b1cd6b60
 target: 0xf18208694c7926100000d1946f306e
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0x8e780ab4715d1473e7babcf05bef6550b9bbaca8dc9460cee3dd3e25bd1f097d
 Total time for loop iteration 1: 2.969214834s
 
-ephemeral tx 3
+unauthenticated tx 3
 sender: 0xf18208694c7926100000d1946f306e
 target: 0xc028077080d628100000f47f698791
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdccd832ed22c9cd9054559d7746b5fe4cc9e78da50638e4a30973f4f0ea74e63
 Total time for loop iteration 2: 2.967574333s
 
-ephemeral tx 4
+unauthenticated tx 4
 sender: 0xc028077080d628100000f47f698791
 target: 0x16c973d5b5cb96100000674ca476f9
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xc8fe1dd90b9008861e4ea3583195edadefbb9443f657ae296dfba0bf4ac56519
 Total time for loop iteration 3: 2.86498225s
 
-ephemeral tx 5
+unauthenticated tx 5
 sender: 0x16c973d5b5cb96100000674ca476f9
 target: 0x53ce6afddd744f100000b5d39c64bd
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xaf4450834db4397de1832ea826c1fcecdf7fee0d8498110f857761e5f4c05bb6
 Total time for loop iteration 4: 2.879300125s
 
-ephemeral tx 6
+unauthenticated tx 6
 sender: 0x53ce6afddd744f100000b5d39c64bd
 target: 0x3b8ed3bfa7c9f9100000dfd8a12b9c
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xb5f3b92272ffde9a5e9634fe8e5ef9d0dc2dc6e1695f09685f5a80f143fef421
 Total time for loop iteration 5: 2.829184834s
 
-ephemeral tx 7
+unauthenticated tx 7
 sender: 0x3b8ed3bfa7c9f9100000dfd8a12b9c
 target: 0x94117096753d06100000470857d9d2
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xed5eaba98132dd7bce4421da72cac330758ca41bd8818edb07526f7b662d8827
 Total time for loop iteration 6: 2.897448917s
 
-ephemeral tx 8
+unauthenticated tx 8
 sender: 0x94117096753d06100000470857d9d2
 target: 0xa8dd5dc6d59e89100000e620b17531
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdd9cc26dbdbb542ef835780f9881708b9867190c353810ebce501955c5dad139
 Total time for loop iteration 7: 2.864668333s
 
-ephemeral tx 9
+unauthenticated tx 9
 sender: 0xa8dd5dc6d59e89100000e620b17531
 target: 0x3d0bdd225de2be1000004ffa75a2c1
 Consumed Note Tx on MidenScan: https://testnet.midenscan.com/tx/0xdd6e35b59032c0a22ce1e8f27c43ee7935ec1c2077ff1c37444ded09b879c330
 Total time for loop iteration 8: 3.070943167s
 
-Total execution time for ephemeral note txs: 26.46999025s
+Total execution time for unauthenticated note txs: 26.46999025s
 blocks: [BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859), BlockNumber(17859)]
 Account: 0x44d89b438d298e1000003636aa7a58 balance: 80
 Account: 0xf275e0bcd03fd110000002b1cd6b60 balance: 0
@@ -411,20 +411,20 @@ Account: 0x3d0bdd225de2be1000004ffa75a2c1 balance: 20
 
 ## Conclusion
 
-Ephemeral notes on Miden offer a powerful mechanism for achieving faster asset settlements by allowing notes to be both created and consumed within the same block. In this guide, we walked through:
+Unauthenticated notes on Miden offer a powerful mechanism for achieving faster asset settlements by allowing notes to be both created and consumed within the same block. In this guide, we walked through:
 
-- **Minting and Transacting with Ephemeral Notes:** Building, serializing, and consuming notes quickly using the Miden client's "unauthenticated note" method.
-- **Performance Observations:** Measuring and demonstrating how ephemeral notes enable assets to be sent faster than the blocktime.
+- **Minting and Transacting with Unauthenticated Notes:** Building, serializing, and consuming notes quickly using the Miden client's "unauthenticated note" method.
+- **Performance Observations:** Measuring and demonstrating how unauthenticated notes enable assets to be sent faster than the blocktime.
 
-By following this guide, you should now have a clear understanding of how to build and deploy high-performance transactions using ephemeral notes on Miden. Ephemeral notes are the ideal approach for applications like central limit order books (CLOBs) or other DeFi platforms where transaction speed is critical.
+By following this guide, you should now have a clear understanding of how to build and deploy high-performance transactions using unauthenticated notes on Miden. Unauthenticated notes are the ideal approach for applications like central limit order books (CLOBs) or other DeFi platforms where transaction speed is critical.
 
 ### Running the example
 
-To run the ephemeral note transfer example, navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
+To run the unauthenticated note transfer example, navigate to the `rust-client` directory in the [miden-tutorials](https://github.com/0xPolygonMiden/miden-tutorials/) repository and run this command:
 
 ```bash
 cd rust-client
-cargo run --release --bin ephemeral_note_transfer
+cargo run --release --bin unauthenticated_note_transfer
 ```
 
 ### Continue learning

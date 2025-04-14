@@ -163,15 +163,15 @@ async fn main() -> Result<(), ClientError> {
     client.sync_state().await?;
 
     //------------------------------------------------------------
-    // STEP 4: Create ephemeral note tx chain
+    // STEP 4: Create unauthenticated note tx chain
     //------------------------------------------------------------
-    println!("\n[STEP 4] Create ephemeral note tx chain");
+    println!("\n[STEP 4] Create unauthenticated note tx chain");
     let mut landed_blocks = vec![];
     let start = Instant::now();
 
     for i in 0..number_of_accounts - 1 {
         let loop_start = Instant::now();
-        println!("\nephemeral tx {:?}", i + 1);
+        println!("\nunauthenticated tx {:?}", i + 1);
         println!("sender: {}", accounts[i].id().to_hex());
         println!("target: {}", accounts[i + 1].id().to_hex());
 
@@ -180,7 +180,7 @@ async fn main() -> Result<(), ClientError> {
         let fungible_asset_send_amount =
             FungibleAsset::new(faucet_account.id(), send_amount).unwrap();
 
-        // for demo purposes, ephemeral notes can be public or private
+        // for demo purposes, unauthenticated notes can be public or private
         let note_type = if i % 2 == 0 {
             NoteType::Private
         } else {
@@ -240,7 +240,7 @@ async fn main() -> Result<(), ClientError> {
     }
 
     println!(
-        "\nTotal execution time for ephemeral note txs: {:?}",
+        "\nTotal execution time for unauthenticated note txs: {:?}",
         start.elapsed()
     );
     println!("blocks: {:?}", landed_blocks);
