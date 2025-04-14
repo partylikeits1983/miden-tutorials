@@ -4,7 +4,7 @@ _Using ephemeral notes for optimistic note consumption_
 
 ## Overview
 
-In this guide, we will explore how to leverage ephemeral notes on Miden to settle transactions faster than the blocktime. Ephemeral notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows the notes to be created and consumed within the same block.
+In this guide, we will explore how to leverage unauthenticated notes on Miden to settle transactions faster than the blocktime. Unauthenticated notes are essentially UTXOs that have not yet been fully committed into a block. This feature allows the notes to be created and consumed within the same block.
 
 We construct a chain of transactions using the unauthenticated notes method on the transaction builder. Ephemeral notes are also referred to as "unauthenticated notes" or "erasable notes". We also demonstrate how a note can be serialized and deserialized, highlighting the ability to transfer notes between client instances for asset transfers that can be settled faster than the blocktime.
 
