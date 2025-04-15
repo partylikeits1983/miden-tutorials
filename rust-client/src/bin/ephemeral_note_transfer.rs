@@ -1,9 +1,6 @@
-use rand::Rng;
-use rand_chacha::rand_core::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use rand::RngCore;
 use std::sync::Arc;
-use std::time::Instant;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
 use miden_client::{
     account::{
@@ -11,64 +8,39 @@ use miden_client::{
         AccountBuilder, AccountStorageMode, AccountType,
     },
     asset::{FungibleAsset, TokenSymbol},
-    crypto::RpoRandomCoin,
+    auth::AuthSecretKey,
+    builder::ClientBuilder,
+    crypto::SecretKey,
+    keystore::FilesystemKeyStore,
     note::{create_p2id_note, Note, NoteType},
     rpc::{Endpoint, TonicRpcClient},
-    store::{sqlite_store::SqliteStore, StoreAuthenticator},
     transaction::{OutputNote, TransactionRequestBuilder},
     utils::{Deserializable, Serializable},
-    Client, ClientError, Felt,
+    ClientError, Felt,
 };
 
-use miden_objects::{account::AuthSecretKey, crypto::dsa::rpo_falcon512::SecretKey, Word};
-
-pub async fn initialize_client() -> Result<Client<RpoRandomCoin>, ClientError> {
-    // RPC endpoint and timeout
+#[tokio::main]
+async fn main() -> Result<(), ClientError> {
+    // Initialize client & keystore
     let endpoint = Endpoint::new(
         "https".to_string(),
         "rpc.testnet.miden.io".to_string(),
         Some(443),
     );
     let timeout_ms = 10_000;
+    let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
-    let rpc_api = Box::new(TonicRpcClient::new(endpoint, timeout_ms));
+    let mut client = ClientBuilder::new()
+        .with_rpc(rpc_api)
+        .with_filesystem_keystore("./keystore")
+        .in_debug_mode(true)
+        .build()
+        .await?;
 
-    let mut seed_rng = rand::thread_rng();
-    let coin_seed: [u64; 4] = seed_rng.gen();
-    let rng = RpoRandomCoin::new(coin_seed.map(Felt::new));
-
-    let store_path = "store.sqlite3";
-    let store = SqliteStore::new(store_path.into())
-        .await
-        .map_err(ClientError::StoreError)?;
-    let arc_store = Arc::new(store);
-    let authenticator = StoreAuthenticator::new_with_rng(arc_store.clone(), rng);
-
-    let client = Client::new(rpc_api, rng, arc_store, Arc::new(authenticator), true);
-    Ok(client)
-}
-
-pub fn get_new_pk_and_authenticator() -> (Word, AuthSecretKey) {
-    let mut seed_rng = rand::thread_rng();
-    let seed: [u8; 32] = seed_rng.gen();
-    let mut rng = ChaCha20Rng::from_seed(seed);
-
-    let sec_key = SecretKey::with_rng(&mut rng);
-    let pub_key: Word = sec_key.public_key().into();
-    let auth_secret_key = AuthSecretKey::RpoFalcon512(sec_key);
-
-    (pub_key, auth_secret_key)
-}
-
-#[tokio::main]
-async fn main() -> Result<(), ClientError> {
-    // ===== Client Initialization =====
-    let mut client = initialize_client().await?;
-    println!("Client initialized successfully.");
-
-    // Fetch latest block from node
     let sync_summary = client.sync_state().await.unwrap();
     println!("Latest block: {}", sync_summary.block_num);
+
+    let keystore = FilesystemKeyStore::new("./keystore".into()).unwrap();
 
     //------------------------------------------------------------
     // STEP 1: Deploy a fungible faucet
@@ -76,8 +48,10 @@ async fn main() -> Result<(), ClientError> {
     println!("\n[STEP 1] Deploying a new fungible faucet.");
 
     // Faucet seed
-    let mut init_seed = [0u8; 32];
+    let mut init_seed = [0_u8; 32];
     client.rng().fill_bytes(&mut init_seed);
+
+    let key_pair = SecretKey::with_rng(client.rng());
 
     // Anchor block
     let anchor_block = client.get_latest_epoch_block().await.unwrap();
@@ -88,7 +62,6 @@ async fn main() -> Result<(), ClientError> {
     let max_supply = Felt::new(1_000_000);
 
     // Generate key pair
-    let key_pair = SecretKey::with_rng(client.rng());
 
     // Build the account
     let builder = AccountBuilder::new(init_seed)
@@ -102,14 +75,14 @@ async fn main() -> Result<(), ClientError> {
 
     // Add the faucet to the client
     client
-        .add_account(
-            &faucet_account,
-            Some(seed),
-            &AuthSecretKey::RpoFalcon512(key_pair),
-            false,
-        )
+        .add_account(&faucet_account, Some(seed), false)
         .await?;
     println!("Faucet account ID: {}", faucet_account.id().to_hex());
+
+    // Add the key pair to the keystore
+    keystore
+        .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+        .unwrap();
 
     // Resync to show newly deployed faucet
     tokio::time::sleep(Duration::from_secs(2)).await;
@@ -124,7 +97,8 @@ async fn main() -> Result<(), ClientError> {
     let number_of_accounts = 10;
 
     for i in 0..number_of_accounts {
-        let init_seed = ChaCha20Rng::from_entropy().gen();
+        let mut init_seed = [0_u8; 32];
+        client.rng().fill_bytes(&mut init_seed);
         let key_pair = SecretKey::with_rng(client.rng());
         let builder = AccountBuilder::new(init_seed)
             .anchor((&anchor_block).try_into().unwrap())
@@ -136,14 +110,12 @@ async fn main() -> Result<(), ClientError> {
         let (account, seed) = builder.build().unwrap();
         accounts.push(account.clone());
         println!("account id {:?}: {}", i, account.id().to_hex());
-        client
-            .add_account(
-                &account,
-                Some(seed),
-                &AuthSecretKey::RpoFalcon512(key_pair.clone()),
-                true,
-            )
-            .await?;
+        client.add_account(&account, Some(seed), true).await?;
+
+        // Add the key pair to the keystore
+        keystore
+            .add_key(&AuthSecretKey::RpoFalcon512(key_pair))
+            .unwrap();
     }
 
     // For demo purposes, Alice is the first account.
@@ -163,7 +135,8 @@ async fn main() -> Result<(), ClientError> {
         client.rng(),
     )
     .unwrap()
-    .build();
+    .build()
+    .unwrap();
     let tx_execution_result = client
         .new_transaction(faucet_account.id(), transaction_request)
         .await?;
@@ -181,7 +154,8 @@ async fn main() -> Result<(), ClientError> {
 
     let transaction_request = TransactionRequestBuilder::new()
         .with_unauthenticated_input_notes([(p2id_note, None)])
-        .build();
+        .build()
+        .unwrap();
     let tx_execution_result = client
         .new_transaction(alice.id(), transaction_request)
         .await?;
@@ -189,15 +163,15 @@ async fn main() -> Result<(), ClientError> {
     client.sync_state().await?;
 
     //------------------------------------------------------------
-    // STEP 4: Create ephemeral note tx chain
+    // STEP 4: Create unauthenticated note tx chain
     //------------------------------------------------------------
-    println!("\n[STEP 4] Create ephemeral note tx chain");
+    println!("\n[STEP 4] Create unauthenticated note tx chain");
     let mut landed_blocks = vec![];
     let start = Instant::now();
 
     for i in 0..number_of_accounts - 1 {
         let loop_start = Instant::now();
-        println!("\nephemeral tx {:?}", i + 1);
+        println!("\nunauthenticated tx {:?}", i + 1);
         println!("sender: {}", accounts[i].id().to_hex());
         println!("target: {}", accounts[i + 1].id().to_hex());
 
@@ -206,7 +180,7 @@ async fn main() -> Result<(), ClientError> {
         let fungible_asset_send_amount =
             FungibleAsset::new(faucet_account.id(), send_amount).unwrap();
 
-        // for demo purposes, ephemeral notes can be public or private
+        // for demo purposes, unauthenticated notes can be public or private
         let note_type = if i % 2 == 0 {
             NoteType::Private
         } else {
@@ -228,8 +202,8 @@ async fn main() -> Result<(), ClientError> {
         // Time transaction request building
         let transaction_request = TransactionRequestBuilder::new()
             .with_own_output_notes(vec![output_note])
-            .unwrap()
-            .build();
+            .build()
+            .unwrap();
         let tx_execution_result = client
             .new_transaction(accounts[i].id(), transaction_request)
             .await?;
@@ -244,7 +218,8 @@ async fn main() -> Result<(), ClientError> {
         let consume_note_request =
             TransactionRequestBuilder::consume_notes(vec![deserialized_p2id_note.id()])
                 .with_unauthenticated_input_notes([(deserialized_p2id_note, None)])
-                .build();
+                .build()
+                .unwrap();
         let tx_execution_result = client
             .new_transaction(accounts[i + 1].id(), consume_note_request)
             .await?;
@@ -265,7 +240,7 @@ async fn main() -> Result<(), ClientError> {
     }
 
     println!(
-        "\nTotal execution time for ephemeral note txs: {:?}",
+        "\nTotal execution time for unauthenticated note txs: {:?}",
         start.elapsed()
     );
     println!("blocks: {:?}", landed_blocks);
