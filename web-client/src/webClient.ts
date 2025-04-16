@@ -47,7 +47,7 @@ export async function webClient(): Promise<void> {
     let mintTxRequest = client.newMintTransactionRequest(
       AccountId.fromHex(aliceIdHex),
       AccountId.fromHex(faucetIdHex),
-      NoteType.public(),
+      NoteType.Public,
       BigInt(1000),
     );
 
@@ -96,7 +96,7 @@ export async function webClient(): Promise<void> {
       AccountId.fromHex(aliceIdHex),
       AccountId.fromHex(dummyIdHex),
       AccountId.fromHex(faucetIdHex),
-      NoteType.public(),
+      NoteType.Public,
       BigInt(100),
     );
 

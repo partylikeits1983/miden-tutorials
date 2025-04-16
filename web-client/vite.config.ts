@@ -3,25 +3,29 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    target: 'esnext',
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true,
-    },
-    rollupOptions: {
-      external: ['@demox-labs/miden-sdk'],
-      output: {
-        format: "es",
-      },
+  
+  // Force the import to the ESM build
+  resolve: {
+    alias: {
+      '@demox-labs/miden-sdk': '@demox-labs/miden-sdk/dist/esm/index.js',
     },
   },
+
+  assetsInclude: ['**/*.wasm'], // so .wasm is recognized as a binary asset
+
+  build: {
+    target: 'esnext',
+    // no external here
+  },
+
   optimizeDeps: {
-    include: ['@demox-labs/miden-sdk'],
+    include: [
+      '@demox-labs/miden-sdk',
+    ],
     esbuildOptions: {
-      target: "esnext",
+      target: 'esnext',
       supported: {
-        "top-level-await": true, 
+        'top-level-await': true,
       },
     },
   },
