@@ -51,40 +51,14 @@ export async function webClient(): Promise<void> {
 
   await client.submitTransaction(txResult);
 
-  console.log("Waiting 10 seconds for transaction confirmation...");
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-  await client.syncState();
+  let tx_script = client.compileTxScript("begin push.1 drop end");
 
-  // 5. Fetch minted notes
-  const mintedNotes = await client.getConsumableNotes(alice.id());
-  const mintedNoteIds = mintedNotes.map((n) =>
-    n.inputNoteRecord().id().toString(),
-  );
-  console.log("Minted note IDs:", mintedNoteIds);
+  console.log(tx_script);
+/*   
+  let counter_contract = await client.importAccountById("0xb584c3769ab90b000004c780363668");
 
-  // 6. Consume minted notes
-  console.log("Consuming minted notes...");
-  let consumeTxRequest = client.newConsumeTransactionRequest(mintedNoteIds);
+  let storage = counter_contract.storage().getItem(0);
 
-  let txResult_2 = await client.newTransaction(alice.id(), consumeTxRequest);
-
-  await client.submitTransaction(txResult_2);
-
-  await client.syncState();
-  console.log("Notes consumed.");
-
-  // 7. Send tokens to a dummy account
-  const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
-  console.log("Sending tokens to dummy account...");
-  let sendTxRequest = client.newSendTransactionRequest(
-    alice.id(),
-    AccountId.fromHex(dummyIdHex),
-    faucet.id(),
-    NoteType.Public,
-    BigInt(100),
-  );
-
-  let txResult_3 = await client.newTransaction(alice.id(), sendTxRequest);
-
-  await client.submitTransaction(txResult_3);
+  console.log(storage);
+ */
 }

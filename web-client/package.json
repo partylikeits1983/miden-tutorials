@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@demox-labs/miden-sdk": "^0.8.2",
+    "miden-sdk-test": "^0.8.3",
     "next": "15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
