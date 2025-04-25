@@ -400,4 +400,4 @@ cargo run --release --bin hash_preimage_note
 
 ### Continue learning
 
-Next tutorial: [Foreign Procedure Invocation](foreign_procedure_invocation.md)
+Next tutorial: [Foreign Procedure Invocation](foreign_procedure_invocation_tutorial.md)
