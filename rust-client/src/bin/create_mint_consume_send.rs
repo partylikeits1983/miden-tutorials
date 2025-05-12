@@ -14,15 +14,17 @@ use miden_client::{
     keystore::FilesystemKeyStore,
     note::{create_p2id_note, NoteType},
     rpc::{Endpoint, TonicRpcClient},
-    transaction::{OutputNote, PaymentTransactionData, TransactionRequestBuilder},
-    ClientError, Felt,
+    transaction::{
+        OutputNote, PaymentTransactionData, TransactionProver, TransactionRequestBuilder,
+    },
+    ClientError, Felt, RemoteTransactionProver,
 };
 use miden_objects::account::AccountIdVersion;
 
 #[tokio::main]
 async fn main() -> Result<(), ClientError> {
     // Initialize client & keystore
-    let endpoint = Endpoint::testnet();
+    let endpoint = Endpoint::new("http".to_string(), "localhost".to_string(), Some(57123));
     let timeout_ms = 10_000;
     let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
@@ -38,6 +40,10 @@ async fn main() -> Result<(), ClientError> {
 
     let keystore: FilesystemKeyStore<rand::prelude::StdRng> =
         FilesystemKeyStore::new("./keystore".into()).unwrap();
+
+    let remote_tx_prover: RemoteTransactionProver =
+        RemoteTransactionProver::new("http://0.0.0.0:8082");
+    let tx_prover: Arc<dyn TransactionProver + 'static> = Arc::new(remote_tx_prover);
 
     //------------------------------------------------------------
     // STEP 1: Create a basic wallet for Alice
@@ -142,7 +148,12 @@ async fn main() -> Result<(), ClientError> {
         let tx_execution_result = client
             .new_transaction(faucet_account.id(), transaction_request)
             .await?;
-        client.submit_transaction(tx_execution_result).await?;
+
+        client
+            .submit_transaction_with_prover(tx_execution_result, tx_prover.clone())
+            .await
+            .unwrap();
+
         println!("Minted note #{} of {} tokens for Alice.", i, amount);
     }
     println!("All 5 notes minted for Alice successfully!");
@@ -174,7 +185,10 @@ async fn main() -> Result<(), ClientError> {
                 .new_transaction(alice_account.id(), transaction_request)
                 .await?;
 
-            client.submit_transaction(tx_execution_result).await?;
+            client
+                .submit_transaction_with_prover(tx_execution_result, tx_prover.clone())
+                .await
+                .unwrap();
             println!("All of Alice's notes consumed successfully.");
             break;
         } else {
@@ -235,7 +249,10 @@ async fn main() -> Result<(), ClientError> {
         .await?;
 
     // Submitting the transaction
-    client.submit_transaction(tx_execution_result).await?;
+    client
+        .submit_transaction_with_prover(tx_execution_result, tx_prover.clone())
+        .await
+        .unwrap();
     println!("Submitted a transaction with 4 P2ID notes.");
 
     println!("Submitting one more single P2ID transaction...");
@@ -272,7 +289,10 @@ async fn main() -> Result<(), ClientError> {
         .new_transaction(alice_account.id(), transaction_request)
         .await?;
 
-    client.submit_transaction(tx_execution_result).await?;
+    client
+        .submit_transaction_with_prover(tx_execution_result, tx_prover.clone())
+        .await
+        .unwrap();
 
     println!("\nAll steps completed successfully!");
     println!("Alice created a wallet, a faucet was deployed,");
