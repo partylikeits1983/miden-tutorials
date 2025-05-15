@@ -101,12 +101,12 @@ Now as an example, Alice will send some tokens to an account in a single transac
 Add this snippet to the end of your file in the `main()` function:
 
 ```ts
-// 7. Send tokens to a dummy account
-const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
-console.log("Sending tokens to dummy account...");
+// 7. Send tokens to Bob
+const bobAccountId = "0x599a54603f0cf9000000ed7a11e379";
+console.log("Sending tokens to Bob's account...");
 let sendTxRequest = client.newSendTransactionRequest(
   alice.id(),
-  AccountId.fromHex(dummyIdHex),
+  AccountId.fromHex(bobAccountId),
   faucet.id(),
   NoteType.Public,
   BigInt(100),
@@ -197,12 +197,12 @@ export async function webClient(): Promise<void> {
   await client.syncState();
   console.log("Notes consumed.");
 
-  // 7. Send tokens to a dummy account
-  const dummyIdHex = "0x599a54603f0cf9000000ed7a11e379";
-  console.log("Sending tokens to dummy account...");
+  // 7. Send tokens to Bob
+  const bobAccountId = "0x599a54603f0cf9000000ed7a11e379";
+  console.log("Sending tokens to Bob's account...");
   let sendTxRequest = client.newSendTransactionRequest(
     alice.id(),
-    AccountId.fromHex(dummyIdHex),
+    AccountId.fromHex(bobAccountId),
     faucet.id(),
     NoteType.Public,
     BigInt(100),
