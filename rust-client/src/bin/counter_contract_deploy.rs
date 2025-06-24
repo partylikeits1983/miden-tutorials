@@ -13,7 +13,9 @@ use miden_client::{
     ClientError, Felt,
 };
 use miden_objects::{
-    account::AccountComponent, assembly::Assembler, assembly::DefaultSourceManager,
+    account::{AccountComponent, NetworkId},
+    assembly::Assembler,
+    assembly::DefaultSourceManager,
 };
 
 fn create_library(
@@ -94,7 +96,10 @@ async fn main() -> Result<(), ClientError> {
         "counter_contract commitment: {:?}",
         counter_contract.commitment()
     );
-    println!("counter_contract id: {:?}", counter_contract.id().to_hex());
+    println!(
+        "counter_contract id: {:?}",
+        counter_contract.id().to_bech32(NetworkId::Testnet)
+    );
     println!("counter_contract storage: {:?}", counter_contract.storage());
 
     client
