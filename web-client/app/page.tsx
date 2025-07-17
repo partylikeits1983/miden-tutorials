@@ -4,12 +4,14 @@ import { createMintConsume } from "../lib/createMintConsume";
 import { multiSendWithDelegatedProver } from "../lib/multiSendWithDelegatedProver";
 import { incrementCounterContract } from "../lib/incrementCounterContract";
 import { unauthenticatedNoteTransfer } from "../lib/unauthenticatedNoteTransfer";
+import { foreignProcedureInvocation } from "../lib/foreignProcedureInvocation";
 
 export default function Home() {
   const [isCreatingNotes, setIsCreatingNotes] = useState(false);
   const [isMultiSendNotes, setIsMultiSendNotes] = useState(false);
   const [isIncrementCounter, setIsIncrementCounter] = useState(false);
   const [isUnauthenticatedNoteTransfer, setIsUnauthenticatedNoteTransfer] = useState(false);
+  const [isForeignProcedureInvocation, setIsForeignProcedureInvocation] = useState(false);
 
   const handleCreateMintConsume = async () => {
     setIsCreatingNotes(true);
@@ -33,6 +35,12 @@ export default function Home() {
     setIsUnauthenticatedNoteTransfer(true);
     await unauthenticatedNoteTransfer();
     setIsUnauthenticatedNoteTransfer(false);
+  };
+
+  const handleForeignProcedureInvocation = async () => {
+    setIsForeignProcedureInvocation(true);
+    await foreignProcedureInvocation();
+    setIsForeignProcedureInvocation(false);
   };
 
   return (
@@ -76,6 +84,15 @@ export default function Home() {
             {isUnauthenticatedNoteTransfer
               ? "Working..."
               : "Tutorial #4: Unauthenticated Note Transfer"}
+          </button>
+
+          <button
+            onClick={handleForeignProcedureInvocation}
+            className="w-full px-6 py-3 text-lg cursor-pointer bg-transparent border-2 border-orange-600 text-white rounded-lg transition-all hover:bg-orange-600 hover:text-white"
+          >
+            {isForeignProcedureInvocation
+              ? "Working..."
+              : "Tutorial #4: Foreign Procedure Invocation"}
           </button>
         </div>
       </div>
