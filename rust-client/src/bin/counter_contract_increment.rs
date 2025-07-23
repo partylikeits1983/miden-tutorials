@@ -36,8 +36,8 @@ async fn main() -> Result<(), ClientError> {
     let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
     let mut client = ClientBuilder::new()
-        .with_rpc(rpc_api)
-        .with_filesystem_keystore("./keystore")
+        .rpc(rpc_api)
+        .filesystem_keystore("./keystore")
         .in_debug_mode(true)
         .build()
         .await?;
@@ -52,7 +52,7 @@ async fn main() -> Result<(), ClientError> {
 
     // Define the Counter Contract account id from counter contract deploy
     let (_, counter_contract_id) =
-        AccountId::from_bech32("mtst1qz4a33pfjn49qqqqq090u4g55upcas8t").unwrap();
+        AccountId::from_bech32("mtst1qz43ftxkrzcjsqz3hpw332qwny2ggsp0").unwrap();
 
     client
         .import_account_by_id(counter_contract_id)
@@ -94,14 +94,13 @@ async fn main() -> Result<(), ClientError> {
 
     let tx_script = TransactionScript::compile(
         script_code,
-        [],
         assembler.with_library(&account_component_lib).unwrap(),
     )
     .unwrap();
 
     // Build a transaction request with the custom script
     let tx_increment_request = TransactionRequestBuilder::new()
-        .with_custom_script(tx_script)
+        .custom_script(tx_script)
         .build()
         .unwrap();
 
@@ -126,7 +125,7 @@ async fn main() -> Result<(), ClientError> {
     let account = client.get_account(counter_contract.id()).await.unwrap();
     println!(
         "counter contract storage: {:?}",
-        account.unwrap().account().storage().get_item(0)
+        account.unwrap().account().storage().get_item(1)
     );
     Ok(())
 }

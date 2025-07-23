@@ -22,6 +22,7 @@ use miden_client::{
 };
 
 use miden_objects::account::NetworkId;
+use miden_objects::note::NoteDetails;
 
 // Helper to create a basic account
 async fn create_basic_account(
@@ -31,12 +32,10 @@ async fn create_basic_account(
     let mut init_seed = [0u8; 32];
     client.rng().fill_bytes(&mut init_seed);
     let key_pair = SecretKey::with_rng(client.rng());
-    let anchor_block = client.get_latest_epoch_block().await.unwrap();
     let builder = AccountBuilder::new(init_seed)
-        .anchor((&anchor_block).try_into().unwrap())
         .account_type(AccountType::RegularAccountUpdatableCode)
         .storage_mode(AccountStorageMode::Public)
-        .with_component(RpoFalcon512::new(key_pair.public_key()))
+        .with_auth_component(RpoFalcon512::new(key_pair.public_key()))
         .with_component(BasicWallet);
     let (account, seed) = builder.build().unwrap();
     client.add_account(&account, Some(seed), false).await?;
@@ -53,15 +52,13 @@ async fn create_basic_faucet(
     let mut init_seed = [0u8; 32];
     client.rng().fill_bytes(&mut init_seed);
     let key_pair = SecretKey::with_rng(client.rng());
-    let anchor_block = client.get_latest_epoch_block().await.unwrap();
     let symbol = TokenSymbol::new("MID").unwrap();
     let decimals = 8;
     let max_supply = Felt::new(1_000_000);
     let builder = AccountBuilder::new(init_seed)
-        .anchor((&anchor_block).try_into().unwrap())
         .account_type(AccountType::FungibleFaucet)
         .storage_mode(AccountStorageMode::Public)
-        .with_component(RpoFalcon512::new(key_pair.public_key()))
+        .with_auth_component(RpoFalcon512::new(key_pair.public_key()))
         .with_component(BasicFungibleFaucet::new(symbol, decimals, max_supply).unwrap());
     let (account, seed) = builder.build().unwrap();
     client.add_account(&account, Some(seed), false).await?;
@@ -100,8 +97,8 @@ async fn main() -> Result<(), ClientError> {
     let rpc_api = Arc::new(TonicRpcClient::new(&endpoint, timeout_ms));
 
     let mut client = ClientBuilder::new()
-        .with_rpc(rpc_api)
-        .with_filesystem_keystore("./keystore")
+        .rpc(rpc_api)
+        .filesystem_keystore("./keystore")
         .in_debug_mode(true)
         .build()
         .await?;
@@ -164,7 +161,7 @@ async fn main() -> Result<(), ClientError> {
     wait_for_notes(&mut client, &alice_account, 1).await?;
 
     let consume_req = TransactionRequestBuilder::new()
-        .with_authenticated_input_notes([(p2id_note.id(), None)])
+        .authenticated_input_notes([(p2id_note.id(), None)])
         .build()
         .unwrap();
     let tx_exec = client
@@ -206,7 +203,7 @@ async fn main() -> Result<(), ClientError> {
     let custom_note = Note::new(vault, metadata, recipient);
 
     let note_req = TransactionRequestBuilder::new()
-        .with_own_output_notes(vec![OutputNote::Full(custom_note.clone())])
+        .own_output_notes(vec![OutputNote::Full(custom_note.clone())])
         .build()
         .unwrap();
     let tx_result = client
@@ -250,8 +247,8 @@ async fn main() -> Result<(), ClientError> {
     let output_note = Note::new(vault, metadata, recipient);
 
     let consume_custom_req = TransactionRequestBuilder::new()
-        .with_unauthenticated_input_notes([(custom_note, None)])
-        .with_expected_output_notes(vec![output_note])
+        .unauthenticated_input_notes([(custom_note, None)])
+        .own_output_notes(vec![(OutputNote::Full(output_note))])
         .build()
         .unwrap();
     let tx_result = client
